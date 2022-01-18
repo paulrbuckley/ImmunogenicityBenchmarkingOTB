@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1585227772214.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3696325072",
+    "id" : "F1E88408",
+    "lastKnownWriteTime" : 1587457348,
+    "last_content_update" : 1587457348215,
+    "path" : "~/OneDrive - Nexus365/Postdoc_Oxford/Immunogenicity_Benchmark/IEDB_Immunogenicity_Model_Calis/balanced_neoantigen_analysis.R",
+    "project_path" : "balanced_neoantigen_analysis.R",
+    "properties" : {
+        "cursorPosition" : "12,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

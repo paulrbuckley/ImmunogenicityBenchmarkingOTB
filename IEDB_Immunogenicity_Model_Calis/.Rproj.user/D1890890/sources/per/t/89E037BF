@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1585815138243.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2156470258",
+    "id" : "89E037BF",
+    "lastKnownWriteTime" : 1587457222,
+    "last_content_update" : 1587457222038,
+    "path" : "~/OneDrive - Nexus365/Postdoc_Oxford/Immunogenicity_Benchmark/IEDB_Immunogenicity_Model_Calis/GBM.R",
+    "project_path" : "GBM.R",
+    "properties" : {
+        "cursorPosition" : "17,84",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

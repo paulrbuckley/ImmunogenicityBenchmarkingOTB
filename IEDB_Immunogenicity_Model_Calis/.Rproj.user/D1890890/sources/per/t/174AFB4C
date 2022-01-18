@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1585149657788.000,
+    "dirty" : true,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "715326157",
+    "id" : "174AFB4C",
+    "lastKnownWriteTime" : 1587457528,
+    "last_content_update" : 1587457533393,
+    "path" : "~/OneDrive - Nexus365/Postdoc_Oxford/Immunogenicity_Benchmark/IEDB_Immunogenicity_Model_Calis/Neoantigen_Analysis/neoantigen_analysis.R",
+    "project_path" : "Neoantigen_Analysis/neoantigen_analysis.R",
+    "properties" : {
+        "cursorPosition" : "19,84",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

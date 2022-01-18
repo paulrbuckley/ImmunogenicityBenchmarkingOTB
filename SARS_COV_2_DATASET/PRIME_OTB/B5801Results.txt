@@ -1,0 +1,13 @@
+####################
+# Output from PRIME (v1.0)
+# Alleles: B5801
+# Affinity predictions: MixMHCpred (/Applications/MixMHCpred-2.1/MixMHCpred)
+# PRIME is freely available for academic users.
+# Private companies should contact eauffarth@licr.org at the Ludwig Institute for Cancer Research Ltd for commercial licenses.
+#
+# To cite PRIME, please refer to:
+# Schmidt et al. Prediction of neo-epitope immunogenicity reveals TCR recognition determinants and immunoediting in human cancer. Cell Reports Medicine, 2021.
+#
+####################
+Peptide	%Rank_bestAllele	Score_bestAllele	%RankBinding_bestAllele	BestAllele	%Rank_B5801	Score_B5801	%RankBinding_B5801
+SITAQPVKI	20.00	0.152584	4.00	B5801	20.00	0.152584	4.00

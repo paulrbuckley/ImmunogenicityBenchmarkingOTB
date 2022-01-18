@@ -1,0 +1,6 @@
+allele: HLA-B2705
+masking: custom
+masked variables: [2, 3, 9]
+
+peptide,length,score
+QRNAPRITF,9,0.21229

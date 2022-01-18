@@ -1,0 +1,19 @@
+library(data.table)
+library(dplyr)
+library(Biostrings)
+library(tidyverse)
+library(pROC)
+setwd("balancedGBM/")
+DATA_FOR_ANALYSIS = fread("result.csv")
+PeptideData = fread("../../BALANCED_GBM_RUI_9mers.txt")
+
+DATA_FOR_ANALYSIS=DATA_FOR_ANALYSIS %>% dplyr::rename(Peptide=peptide)
+DATA_FOR_ANALYSIS=DATA_FOR_ANALYSIS %>% inner_join(PeptideData) %>% dplyr::rename(ImmunogenicityScore=score) 
+
+roc1=roc(Immunogenicity ~ ImmunogenicityScore,data = DATA_FOR_ANALYSIS)
+coords(roc=roc1, x="best", input="threshold", best.method="youden", transpose=F)[1]%>%pull()
+
+DATA_FOR_ANALYSIS=DATA_FOR_ANALYSIS %>% mutate(ImmunogenicityPrediction=ifelse(ImmunogenicityScore>=coords(roc=roc1, x="best", input="threshold", best.method="youden", transpose=F)[1]%>%pull(),"Positive","Negative"))
+sum(DATA_FOR_ANALYSIS$Immunogenicity==DATA_FOR_ANALYSIS$ImmunogenicityPrediction)/nrow(DATA_FOR_ANALYSIS)
+
+write.csv(DATA_FOR_ANALYSIS,file="IEDBMODEL_SCORES.csv",quote=FALSE,row.names=FALSE)

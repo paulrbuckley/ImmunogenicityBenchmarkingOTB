@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1584357394480.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1809673202",
+    "id" : "E329D6B2",
+    "lastKnownWriteTime" : 1587457331,
+    "last_content_update" : 1587457331424,
+    "path" : "~/OneDrive - Nexus365/Postdoc_Oxford/Immunogenicity_Benchmark/IEDB_Immunogenicity_Model_Calis/analysis.R",
+    "project_path" : "analysis.R",
+    "properties" : {
+        "cursorPosition" : "13,0",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 1,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

@@ -1,0 +1,6 @@
+allele: HLA-B5801
+masking: custom
+masked variables: [1, 2, 9]
+
+peptide,length,score
+SITAQPVKI,9,-0.16243

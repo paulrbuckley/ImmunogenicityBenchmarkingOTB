@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1585818447957.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1964260552",
+    "id" : "88EC7C42",
+    "lastKnownWriteTime" : 1587457328,
+    "last_content_update" : 1587457328326,
+    "path" : "~/OneDrive - Nexus365/Postdoc_Oxford/Immunogenicity_Benchmark/IEDB_Immunogenicity_Model_Calis/balancedGBM.R",
+    "project_path" : "balancedGBM.R",
+    "properties" : {
+        "cursorPosition" : "18,84",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
