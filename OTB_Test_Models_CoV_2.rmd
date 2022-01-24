@@ -317,7 +317,7 @@ NetmhcpanresBA=NetmhcpanresBA %>% select(Peptide, HLA_Allele,Immunogenicity,Ave,
 
 ## PRIME
 ### Run
-- Code to run 'PRIME'
+- Example code to run 'PRIME'
 - Please see PRIME repository for installing and executing this model (https://github.com/GfellerLab/PRIME).
 - MixMHCpred is required (https://github.com/GfellerLab/MixMHCpred)
 - 'RESULTS_OUTPUT' location will need to be changed
@@ -376,7 +376,7 @@ PRIME_RESULTS=PRIME_RESULTS %>% mutate(Dataset = "PRIME")
 FullDataset %>% mutate(Length =  width(Peptide)) %>% filter(Length %in% c(9,10)) %>% select(Peptide, HLA_Allele) %>% mutate(HLA_Allele = gsub("\\:","",HLA_Allele)) %>% readr::write_csv(file="OUT_DEEPIMMUNO.csv",col_names = FALSE)
 # Read in the webserver results
 DEEPIMM=fread("SARS_COV_2_DATASET/DEEPIMMUNO_OTB/result.txt") %>% dplyr::rename(Peptide =peptide, HLA_Allele=HLA,ImmunogenicityScore=immunogenicity)
-# Match the HLAs
+# Map the HLA nomenclature
 DEEPIMM$HLA_Allele = ClosestMatch2(DEEPIMM$HLA_Allele,unique(FullDataset$HLA_Allele))
 DEEPIMM %>% nrow
 DEEPIMM=DEEPIMM %>% inner_join(FullDataset)%>%mutate(Dataset = "DeepImmuno")

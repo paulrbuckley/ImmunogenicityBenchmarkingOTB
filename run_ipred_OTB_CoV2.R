@@ -10,7 +10,6 @@ library(pROC)
 select <- dplyr::select
 CORES <- 4
 res_em=NULL
-# Substitute chowell training data for new training data. For simplicity, keep the name as 'chowell'
 chowell <- fread("classifier/chowell.txt")
 # kidera below can also be calculated by using compute kidera function below for each amino acid.
 kidera <- fread("classifier/kidera.txt") %>% melt
