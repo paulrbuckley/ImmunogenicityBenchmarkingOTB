@@ -8,8 +8,6 @@ output: bookdown::html_document2
 - The following code generates Figures 1C, the confusion matrices in S2, and the bootstrap analysis figures in S2.
 
 ## Import packages
-
-## Import packages
 ```{r setup,message=FALSE}
 library(pROC)
 library(ggpubr)
@@ -69,7 +67,7 @@ foreach(allele_i=1:length(unique(FullDataset$HLA_Allele)))%do%{
     testdata=paste0(TEST_DATA_LOCATION,"Allele_",HLA_ALLELE_FOR_TESTING,"_test_data.txt")
     write.table(FullDataset %>% filter(HLA_Allele %in% unique(FullDataset$HLA_Allele)[allele_i]) %>% select(Peptide) %>% pull,file=testdata,sep="\n",col.names = F,row.names = F,quote=F)
     RESULTS_OUTPUT = paste0(TEST_DATA_LOCATION,"Allele_",HLA_ALLELE_FOR_TESTING,"_Results.txt")
-  system(paste0("python ../IEDB_Immunogenicity_Model_Calis/immunogenicity_model/predict_immunogenicity.py ",testdata,
+  system(paste0("python IEDB_Immunogenicity_Model_Calis/immunogenicity_model/predict_immunogenicity.py ",testdata,
               " --allele=",HLA_ALLELE_FOR_TESTING," > ",RESULTS_OUTPUT))
 }
 
@@ -335,20 +333,13 @@ NetmhcpanresBA=NetmhcpanresBA %>% select(Peptide, HLA_Allele,Immunogenicity,Ave,
 
 
 for(allele_i in 1:length(unique(FullDataset$HLA_Allele))){
-  HLA_ALLELE_FOR_TESTING = gsub(x=unique(FullDataset$HLA_Allele)[allele_i],pattern=":|\\*||-|HLA",replacement = "")
-
+    HLA_ALLELE_FOR_TESTING = gsub(x=unique(FullDataset$HLA_Allele)[allele_i],pattern=":|\\*||-|HLA",replacement = "")
     testdata=paste0("~/Documents/PRIMEDATA_NEOANTIGEN_GBM/",HLA_ALLELE_FOR_TESTING,".txt")
-
-  data_for_run = FullDataset %>% filter(HLA_Allele %in% unique(FullDataset$HLA_Allele)[allele_i])
-
-
-write.table(data_for_run %>% select(Peptide) %>% pull,file=testdata,sep="\n",col.names = F,row.names = F,quote=F)
+    data_for_run = FullDataset %>% filter(HLA_Allele %in% unique(FullDataset$HLA_Allele)[allele_i])
+    write.table(data_for_run %>% select(Peptide) %>% pull,file=testdata,sep="\n",col.names = F,row.names = F,quote=F)
 # Run model
-RESULTS_OUTPUT = paste0("~/Documents/PRIMEDATA_NEOANTIGEN_GBM/",HLA_ALLELE_FOR_TESTING,"Results.txt")
-
-
-
-  system(paste0("/Applications/PRIME-master/PRIME -i ",testdata," -a ",HLA_ALLELE_FOR_TESTING," -mix /Applications/MixMHCpred-2.1/MixMHCpred"," -o ", RESULTS_OUTPUT))
+    RESULTS_OUTPUT = paste0("~/Documents/PRIMEDATA_NEOANTIGEN_GBM/",HLA_ALLELE_FOR_TESTING,"Results.txt")
+    system(paste0("/Applications/PRIME-master/PRIME -i ",testdata," -a ",HLA_ALLELE_FOR_TESTING," -mix /Applications/MixMHCpred-2.1/MixMHCpred"," -o ", RESULTS_OUTPUT))
 
 
 
@@ -378,7 +369,7 @@ PRIME_RESULTS <- unnest(data3) %>% as.data.table %>% select(Peptide,BestAllele,S
 PRIME_RESULTS=PRIME_RESULTS %>% dplyr::rename(ImmunogenicityScore=Score_bestAllele,HLA_Allele=BestAllele)
 # Map the HLA allele nomenclature
 PRIME_RESULTS$HLA_Allele = ClosestMatch2(PRIME_RESULTS$HLA_Allele, unique(FullDataset$HLA_Allele))
-# join pRIME output with input test data
+# join PRIME output with input test data
 PRIME_RESULTS=PRIME_RESULTS %>% inner_join(FullDataset,by=c("Peptide","HLA_Allele"))
 # Test same size of DT output from PRIME as input to PRIME
 print(c("PRIME_RESULTS Results has same number of rows as test dataset? : ",PRIME_RESULTS %>% nrow == FullDataset %>% nrow))
@@ -389,7 +380,7 @@ PRIME_RESULTS=PRIME_RESULTS %>% mutate(Dataset = "PRIME")
 
 
 ## DeepImmuno
-- Can only process peptides of lengths only 9 and 10. We have pre-filtered for these lengths to compile the test dataset so does not affect the number of CoV2 peptides here.
+- Can only process peptides of lengths only 9 and 10. We have pre-filtered for these lengths to compile the test dataset so does not affect the number of peptides here.
 - We were unable to compile model locally, so instead we used the webserver and read the results in.
 
 ```{r}
@@ -398,7 +389,6 @@ FullDataset %>% mutate(Length =  width(Peptide)) %>% filter(Length %in% c(9,10))
 mutate(HLA_Allele = gsub("HLA-A","HLA-A*",HLA_Allele))%>% readr::write_csv(file="OUT_DEEPIMMUNO.csv",col_names = FALSE)
 # Read in webserver results
 DEEPIMM=fread("NEOANTIGEN_GBM/DEEPIMMUNO_OTB/result.txt") %>% dplyr::rename(Peptide =peptide, HLA_Allele=HLA,ImmunogenicityScore=immunogenicity)
-# Map the HLA nomenclature
 DEEPIMM$HLA_Allele = ClosestMatch2(DEEPIMM$HLA_Allele,unique(FullDataset$HLA_Allele))
 
 DEEPIMM=DEEPIMM %>% inner_join(FullDataset)%>%mutate(Dataset = "DeepImmuno")
@@ -437,17 +427,18 @@ DEEPHLAPAN_RESULTS=DEEPHLAPAN_RESULTS %>% inner_join(FullDataset)%>%mutate(Datas
 ## GAO predictor
 - Gao was executed with default settings.
 - Results are read in below
+- Example script is provided (NEOANTIGEN_GBM/GAO_OTB/analyze.R), but will not execute until file paths are corrected.
 
 ### output
 
-```{r}
+```{}
 library(seqinr)
-TEST_DATA_LOCATION= "/Users/paulbuckley/Documents/GAO_immunogenicity_predictor_OTB/examples/GBM_PB/"
+TEST_DATA_LOCATION= "ENTER_FILE_NAME_HERE"
 
 FullDataset %>% select(HLA_Allele, Peptide) %>%mutate(HLA_Allele = gsub("\\*","",HLA_Allele))%>% group_by(Peptide) %>% dplyr::summarise(HLA_Allele = unique(paste0(HLA_Allele,collapse = ",")))%>% select(HLA_Allele, Peptide)%>%
     readr::write_tsv(file=paste0(TEST_DATA_LOCATION,"peptides_MHC.txt"),col_names = FALSE)
 
-
+# run analyze.R
 
 ```
 
@@ -455,7 +446,7 @@ FullDataset %>% select(HLA_Allele, Peptide) %>%mutate(HLA_Allele = gsub("\\*",""
 ### read
 
 ```{r}
-TEST_DATA_LOCATION= "/Users/paulbuckley/Documents/GAO_immunogenicity_predictor_OTB/examples/GBM_PB/"
+TEST_DATA_LOCATION= "NEOANTIGEN_GBM/GAO_OTB/"
 files <- dir(TEST_DATA_LOCATION, pattern = ".csv")
 
 data3 <- data_frame(file = files) %>%
@@ -473,7 +464,7 @@ GAO_RESULTS=GAO_RESULTS %>% select(!file) %>% dplyr::rename(ImmunogenicityScore=
 
 # Results
 ## Combine all data into DT 'combinedData'
-- Confirm each model (Dataset column) has 878 obs each
+- Confirm each model (Dataset column) has 123 obs each
 ```{r}
 # Bind all the model results together
 combinedData = rbind(IEDB_RESULTS,NetTepi_Results%>% select(!Epitopes),IPRED_RESULTS,REPITOPE_RESULTS,PRIME_RESULTS, Netmhcpanres, NetmhcpanresBA,GAO_RESULTS, DEEPHLAPAN_RESULTS,DEEPIMM)
@@ -486,42 +477,6 @@ combinedData %>% nrow
 combinedData %>% select(Dataset) %>% table
 
 ```
-
-
-## Create ROC-Curves
-
-```{r,fig.width=8,fig.height=6,message=FALSE,warning=FALSE,dpi=300}
-
- AUCDF = combinedData %>% group_by(Dataset) %>% dplyr::summarise(ROC=as.numeric(roc(Immunogenicity ~ ImmunogenicityScore)$auc))
-
-# use 'roc' function from pROC to generate roc curves for each model
-
-NETTEPIAUC=roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'NETTEPI'))
-IPREDAUC=roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'IPRED'))
-IEDBMODELAUC=roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'IEDB'))
-REPITOPE_AUC_CV=roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'REPITOPE'))
-#NetTepi_NETMHC.AUC.CV = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'NETTEPI_netMHCpan4'))
-PRIME_AUC_CV =  roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'PRIME'))
-DEEP_IMM_AUC =  roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'DeepImmuno'))
-NETMHCPAN_IMM_AUC = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'netMHCpan_EL'))
-NETMHCPAN_IMM_BA_AUC = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'netMHCpan_BA'))
-GAO_AUC = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'GAO'))
-DEEPHLAPAN_AUC = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'DeepHLApan'))
-
-# Use GGROC to combine and visualise the ROC-AUC curves
-
-roc_AUC=ggroc(list(IEDB_Model=IEDBMODELAUC,iPred=IPREDAUC,NetTepi=NETTEPIAUC,REpitope=REPITOPE_AUC_CV,PRIME=PRIME_AUC_CV,DeepImmuno=DEEP_IMM_AUC,netMHCpan_EL=NETMHCPAN_IMM_AUC,netMHCpan_BA=NETMHCPAN_IMM_BA_AUC,GAO=GAO_AUC),legacy.axes = TRUE,size=1.25) + theme_bw() +
-  annotate("size"=4,"text",x=.70,y=.19,label=paste0("IEDB:     ",round(auc(IEDBMODELAUC),digits=3),"\n","iPred:     ",round(auc(IPREDAUC),digits=3),"\n","NetTepi: ",round(auc(NETTEPIAUC),digits=3),"\n","Repitope: ",round(auc(REPITOPE_AUC_CV),digits=3), "\n","PRIME: ",round(auc(PRIME_AUC_CV),digits = 3), "\n","DeepImmuno: ", round(auc(DEEP_IMM_AUC),digits = 3),  "\n","netMHCpan_EL: ", round(auc(NETMHCPAN_IMM_AUC),digits = 3),  "\n","netMHCpan_BA: ", round(auc(NETMHCPAN_IMM_BA_AUC),digits = 3),  "\n","GAO: ", round(auc(GAO_AUC),digits = 3),
-                                                    "\n","DeepHLApan: ", round(auc(DEEPHLAPAN_AUC),digits = 3))) + font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=12) + geom_abline(size=1,intercept = 0, slope = 1,color = "darkgrey", linetype = "dashed")+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)#+ggtitle("ROC Curves")
-
-roc_AUC
-```
-
-
-
-
-
-
 
 
 ## Produce PR-AUC
@@ -538,7 +493,7 @@ DATA_FOR_PR[DATA_FOR_PR$Dataset == 'IPRED',]$Dataset = "iPred"
 DATA_FOR_PR[DATA_FOR_PR$Dataset == 'NETTEPI',]$Dataset = "NetTepi"
 DATA_FOR_PR[DATA_FOR_PR$Dataset == 'REPITOPE',]$Dataset = "REpitope"
 
-#Calculate the real praucs
+#Calculate the praucs
 PR_AUC_COMBINED=DATA_FOR_PR %>% group_by(Dataset) %>% pr_auc(Immunogenicity,ImmunogenicityScore)
 PR_AUC_COMBINED$.estimate=round(PR_AUC_COMBINED$.estimate,digits=3)
 

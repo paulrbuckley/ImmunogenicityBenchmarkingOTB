@@ -1,0 +1,29 @@
+####################
+# Output from PRIME (v1.0)
+# Alleles: B0702
+# Affinity predictions: MixMHCpred (/Applications/MixMHCpred-2.1/MixMHCpred)
+# PRIME is freely available for academic users.
+# Private companies should contact eauffarth@licr.org at the Ludwig Institute for Cancer Research Ltd for commercial licenses.
+#
+# To cite PRIME, please refer to:
+# Schmidt et al. Prediction of neo-epitope immunogenicity reveals TCR recognition determinants and immunoediting in human cancer. Cell Reports Medicine, 2021.
+#
+####################
+Peptide	%Rank_bestAllele	Score_bestAllele	%RankBinding_bestAllele	BestAllele	%Rank_B0702	Score_B0702	%RankBinding_B0702
+APKVEADESL	3.00	0.164648	0.40	B0702	3.00	0.164648	0.40
+ATAAARGPV	2.00	0.167625	0.30	B0702	2.00	0.167625	0.30
+CPLQCFQPRL	20.00	0.153425	4.00	B0702	20.00	0.153425	4.00
+GPSPSSEAL	0.20	0.180483	0.02	B0702	0.20	0.180483	0.02
+GPVEEVRAL	3.00	0.164068	0.30	B0702	3.00	0.164068	0.30
+GPVEEVRALL	9.00	0.156829	2.00	B0702	9.00	0.156829	2.00
+KPANHRGQL	0.08	0.185154	0.02	B0702	0.08	0.185154	0.02
+KPMEAVTVAV	0.30	0.176538	0.50	B0702	0.30	0.176538	0.50
+LPGLILYTL	0.03	0.191418	0.60	B0702	0.03	0.191418	0.60
+RGPVEEVRAL	100.00	0.000000	6.00	B0702	100.00	0.000000	6.00
+RGRMQTASL	0.30	0.176551	0.20	B0702	0.30	0.176551	0.20
+RPRRVEIVAL	0.01	0.196890	0.02	B0702	0.01	0.196890	0.02
+RPTYEEGFL	5.00	0.160550	2.00	B0702	5.00	0.160550	2.00
+RPVGGRPGW	5.00	0.160540	0.50	B0702	5.00	0.160540	0.50
+RPVWKLVKV	0.07	0.186405	0.40	B0702	0.07	0.186405	0.40
+SPWKDGDEL	2.00	0.165855	0.20	B0702	2.00	0.165855	0.20
+VPTLGRGGW	8.00	0.157123	2.00	B0702	8.00	0.157123	2.00

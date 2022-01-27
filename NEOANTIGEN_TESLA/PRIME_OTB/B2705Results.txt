@@ -1,0 +1,31 @@
+####################
+# Output from PRIME (v1.0)
+# Alleles: B2705
+# Affinity predictions: MixMHCpred (/Applications/MixMHCpred-2.1/MixMHCpred)
+# PRIME is freely available for academic users.
+# Private companies should contact eauffarth@licr.org at the Ludwig Institute for Cancer Research Ltd for commercial licenses.
+#
+# To cite PRIME, please refer to:
+# Schmidt et al. Prediction of neo-epitope immunogenicity reveals TCR recognition determinants and immunoediting in human cancer. Cell Reports Medicine, 2021.
+#
+####################
+Peptide	%Rank_bestAllele	Score_bestAllele	%RankBinding_bestAllele	BestAllele	%Rank_B2705	Score_B2705	%RankBinding_B2705
+HRDRLIGLMM	0.60	0.175466	0.80	B2705	0.60	0.175466	0.80
+HRIELDPSKF	0.70	0.173823	0.10	B2705	0.70	0.173823	0.10
+KRACCIPGR	0.30	0.180588	0.20	B2705	0.30	0.180588	0.20
+KRACCIPGRR	2.00	0.170775	0.50	B2705	2.00	0.170775	0.50
+KRCPGRFVY	0.30	0.181436	0.20	B2705	0.30	0.181436	0.20
+KRRPSGFFLF	0.20	0.184300	0.30	B2705	0.20	0.184300	0.30
+LRTADWHLY	0.09	0.189262	0.40	B2705	0.09	0.189262	0.40
+LRTADWHLYL	100.00	0.000000	6.00	B2705	100.00	0.000000	6.00
+NRYAVQDFL	0.30	0.181691	0.30	B2705	0.30	0.181691	0.30
+NRYAVQDFLH	2.00	0.170904	2.00	B2705	2.00	0.170904	2.00
+RRHIEIRDK	0.60	0.175738	0.20	B2705	0.60	0.175738	0.20
+RRPSGFFLF	0.07	0.191011	0.20	B2705	0.07	0.191011	0.20
+RRQSMTVKR	0.02	0.203261	0.01	B2705	0.02	0.203261	0.01
+RRQSMTVKRE	2.00	0.168087	0.80	B2705	2.00	0.168087	0.80
+RRSMLFARH	0.04	0.196445	0.06	B2705	0.04	0.196445	0.06
+RRSMLFARHL	0.40	0.178483	0.50	B2705	0.40	0.178483	0.50
+SQNQHENDI	100.00	0.000000	7.00	B2705	100.00	0.000000	7.00
+SRMGQTVIAV	0.80	0.173503	0.70	B2705	0.80	0.173503	0.70
+YRHVHLRSF	0.40	0.178710	0.20	B2705	0.40	0.178710	0.20
