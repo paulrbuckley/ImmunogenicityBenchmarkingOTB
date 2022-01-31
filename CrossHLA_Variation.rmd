@@ -1,0 +1,153 @@
+---
+title: "Potential issues underlying model performance: Cross-HLA variation"
+author: paulrbuckley, RDM, University of Oxford.
+output: bookdown::html_document2
+---
+
+```{r setup,message=FALSE}
+library(pROC)
+library(ggpubr)
+library(Biostrings)
+library(data.table)
+library(dplyr)
+library(PepTools)
+library(cowplot)
+library(rstatix)
+library(purrr)
+library(tidyverse)
+library(yardstick)
+library(doParallel)
+library(foreach)
+library(stringdist)
+library(caret)
+library(elucidate)
+```
+
+# Introduction
+- The below generates the panels in Figure 3.
+
+## useful Functions
+
+```{r}
+
+# Function to provide a closest match. Used to match HLA Alleles across mixed output styles.
+ClosestMatch2 = function(string, stringVector){
+
+  stringVector[amatch(string, stringVector, maxDist=Inf)]
+
+}
+
+
+```
+
+
+# Explore model training data
+
+## Generate Fig 3A
+
+```{r,dpi=300}
+# Read in combined model training data
+trainingDataMHC = readRDS("model_training_data_all_mhc.rds")
+# Clean A0201 nomenclature to make consistent across models
+trainingDataMHC=trainingDataMHC  %>% mutate(HLA_Allele = gsub("HLA-A0201|HLA-A\\*0201|A\\*0201","HLA-A\\*02:01",HLA_Allele))
+# Binary immunogenicity
+trainingDataMHC=trainingDataMHC %>% mutate(Immunogenicity = ifelse(grepl("Positive",Immunogenicity),"Positive","Negative"))
+# For each model find the 10 alleles with most epitopes in the training data.
+ALLELES_TO_VIS=trainingDataMHC%>%group_by(HLA_Allele,Tool)%>% dplyr::summarise(n=n())%>% group_by(Tool)%>%mutate(Freq = n/sum(n))%>% filter(!HLA_Allele == "") %>% arrange(Tool, desc(n))%>% slice_max(order_by = n,n=10)%>% select(HLA_Allele,Tool)
+# Generate a barplot of frequencies
+FIGA_ALLELES_PLT=trainingDataMHC%>%group_by(Immunogenicity,HLA_Allele,Tool)%>% dplyr::summarise(n=n())%>% group_by(Tool)%>%mutate(Freq = n/sum(n))%>% arrange(Tool, desc(Freq)) %>% inner_join(ALLELES_TO_VIS)%>% mutate(HLA_Allele = gsub("HLA\\-","",HLA_Allele))%>% mutate(HLA_Allele = gsub("\\*|\\:","",HLA_Allele))%>% arrange(desc(HLA_Allele))%>%
+        ggbarplot(x="HLA_Allele",y="Freq",fill="Immunogenicity",position=position_dodge2())+theme_pubr(base_size = 18)+facet_wrap(~Tool,scales="free")+rotate_x_text(angle=90)+ylab("Frequency of Model Training Data")+coord_flip()
+
+
+```
+
+## Generate Fig 3B
+
+```{r,dpi=300, fig.width = 6}
+# Label epitopes as either 'A0201+ or A0201-' and visualise the corresponding frequencies of epitopes in these grous for each model.
+FIGB_A0201DOMINATION_PLT=trainingDataMHC %>% mutate(A0201_OR_NOT = ifelse(grepl("HLA-A\\*02:01|A0201|A\\*0201",HLA_Allele),"HLA-A*02:01+","HLA-A*02:01-"))%>%
+  group_by(Immunogenicity,A0201_OR_NOT,Tool)%>% dplyr::summarise(n=n())%>% group_by(Tool)%>%mutate(Freq = n/sum(n))%>% arrange(Tool, desc(Freq))%>% slice_max(order_by = Freq,n=10)%>% mutate(A0201_OR_NOT = gsub("HLA\\-","",A0201_OR_NOT))%>%
+        ggbarplot(x="A0201_OR_NOT",y="Freq",fill="Immunogenicity",position=position_dodge2())+theme_pubr(base_size = 18)+facet_wrap(~Tool,scales="free")+rotate_x_text(angle=90)+
+            ylab("Frequency of Model Training Data")+xlab("HLA-A*02:01 Status")+coord_flip()#+font("y.text",size=10)
+
+```
+
+
+## Generate Fig 3C
+
+
+```{r,dpi=300, fig.width = 16, fig.height = 16}
+# Read in SARS-CoV-2 dataset following the benchmarking
+COV2_DATA = readRDS("COV2_OTB_COMBINEDDATA.rds")
+# Label A0201+ or A0201-
+COV2_DATA=COV2_DATA %>% mutate(A0201_OR_NOT = ifelse(grepl("HLA-A\\*02:01|A0201|A\\*0201",HLA_Allele),"HLA-A*02:01+","HLA-A*02:01-"))
+# Compare scores for each model, grouped by whether the peptide binds A0201 or not.
+COHENS_D=COV2_DATA %>%group_by(Dataset) %>% cohens_d(ImmunogenicityScore~A0201_OR_NOT,ref.group = "HLA-A*02:01-")%>% mutate(effsize = paste0("cohens-d: ",round(effsize,digits=3)))
+mycomparisons = list(c("+","-"))
+
+COV2_DATA[is.na(COV2_DATA$ImmunogenicityScore), ]
+
+```
+
+```{r,dpi=300, fig.width = 9,fig.height=7}
+# Simplify immunogenicity labels for visualisations
+COV2_DATA=COV2_DATA %>% mutate(Immunogenicity_FULL = ifelse(Immunogenicity == 'Positive', "Pve","Nve"))
+COV2_DATA=COV2_DATA %>% mutate(A201_IMM = paste0(A0201_OR_NOT,"_",Immunogenicity_FULL))
+# Calcuate the median of the Nonimmunogenic A0201+ group for each model.
+MEDIAN_DATA_A201_NEG = COV2_DATA %>% filter(A201_IMM == 'HLA-A*02:01+_Nve') %>% group_by(Dataset)%>% dplyr::summarise(medianIMM = median(ImmunogenicityScore))
+# Calculate Cohens-d scores between A0201 status groups
+COHENS_D=COV2_DATA%>% filter(A201_IMM %in% c("HLA-A*02:01+_Nve","HLA-A*02:01-_Pve"))%>% mutate(A201_IMM = gsub("HLA\\-|\\*","",A201_IMM))%>% mutate(A201_IMM = gsub("\\_","\n",A201_IMM)) %>%group_by(Dataset) %>% cohens_d(ImmunogenicityScore~A201_IMM)%>% mutate(effsize = paste0("cohens-d: ",round(effsize,digits=3)))
+
+```
+
+```{r,dpi=300}
+
+mycomparison = list(c("A02:01+\nNve","A02:01-\nPve"), c("A02:01+\nPve","A02:01+\nNve"))
+
+```
+
+```{r,dpi=300, fig.width = 14, fig.height=11}
+BOXPLOTS_FIGC_PLT=COV2_DATA %>% inner_join(COHENS_D %>% select(Dataset, effsize)) %>% filter(!Dataset %in% c("netMHCpan_BA","netMHCpan_EL"))%>% mutate(A201_IMM = gsub("HLA\\-|\\*","",A201_IMM))%>% mutate(A201_IMM = gsub("\\_","\n",A201_IMM))  %>%
+  mutate(A201_IMM = factor(A201_IMM, levels = c("A02:01+\nPve","A02:01+\nNve","A02:01-\nPve","A02:01-\nNve")))%>%
+  ggplot(aes(x=(A201_IMM),y=ImmunogenicityScore,color=Immunogenicity))+geom_boxplot(notch = TRUE) + stat_summary(fun=median, geom="point", shape=19,size=5, color="green")+theme_pubr(base_size = 18)+facet_wrap(~Dataset,scales="free",nrow=2)+ geom_hline(data=MEDIAN_DATA_A201_NEG%>% filter(!Dataset %in% c("netMHCpan_BA","netMHCpan_EL")),aes(yintercept=medianIMM), linetype="dashed", color = "red", size=0.5)+xlab("Group")+rotate_x_text(angle=90)+stat_compare_means(comparisons = mycomparison,label="p.signif")#+font("x.text",size=12)+stat_pvalue_manual(COHENS_D,label="effsize",y.position = 1.0,size=3)#+scale_x_discrete(limits = rev)
+
+```
+
+# Plot Figs 3-C
+
+```{r,dpi=300, fig.width = 18, fig.height=18}
+
+library(cowplot)
+A_B_GRID=plot_grid(FIGA_ALLELES_PLT,FIGB_A0201DOMINATION_PLT, rel_widths = c(1,1), nrow=1, align="hv",axis="bt")
+
+C_GRID = plot_grid(BOXPLOTS_FIGC_PLT, nrow=1)
+
+plot_grid(A_B_GRID, C_GRID, rel_widths = c(1,2), rel_heights = c(1.4,1.6),nrow=2)
+
+```
+
+
+# Generate and plot Fig3D
+
+
+```{r,fig.width=8,fig.height=6,message=FALSE,warning=FALSE,dpi=300}
+# ROC-AUCs for ImmunogenicityScore vs A0201 status
+COV2_DATA%>% group_by(Dataset) %>% dplyr::summarise(ROC=as.numeric(roc(A0201_OR_NOT ~ ImmunogenicityScore)$auc))
+
+# Generate ROC CURVES
+NETTEPIAUC=roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'NETTEPI'))
+IPREDAUC=roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'IPRED'))
+IEDBMODELAUC=roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'IEDB'))
+REPITOPE_AUC_CV=roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'REPITOPE'))
+PRIME_AUC_CV =  roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'PRIME'))
+DEEP_IMM_AUC =  roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'DeepImmuno'))
+GAO_AUC = roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'GAO'))
+# Use ggroc to visualise
+roc_AUC=ggroc(list(IEDB_Model=IEDBMODELAUC,iPred=IPREDAUC,NetTepi=NETTEPIAUC,REpitope=REPITOPE_AUC_CV,PRIME=PRIME_AUC_CV,DeepImmuno=DEEP_IMM_AUC,GAO=GAO_AUC),legacy.axes = TRUE,size=1.25) + theme_bw() +
+  annotate("size"=5,"text",x=.70,y=.25,label=paste0("IEDB:     ",round(auc(IEDBMODELAUC),digits=3),"\n","iPred:     ",round(auc(IPREDAUC),digits=3),"\n","NetTepi: ",round(auc(NETTEPIAUC),digits=3),"\n","Repitope: ",round(auc(REPITOPE_AUC_CV),digits=3), "\n","PRIME: ",round(auc(PRIME_AUC_CV),digits = 3), "\n","DeepImmuno: ", round(auc(DEEP_IMM_AUC),digits = 3), "\n","GAO: ", round(auc(GAO_AUC),digits = 3))) + font("xy.text",size=18,color="black")+ font("xlab",size=18,color="black")+ font("ylab",size=18,color="black") + font("legend.title",color="white") + font("legend.text",size=14) + geom_abline(size=1,intercept = 0, slope = 1,color = "darkgrey", linetype = "dashed")#+ggtitle("ROC Curves")
+
+roc_AUC
+
+```
+
+
