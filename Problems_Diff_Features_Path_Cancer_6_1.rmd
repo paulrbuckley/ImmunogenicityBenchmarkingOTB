@@ -24,8 +24,7 @@ library(stringdist)
 library(caret)
 library(elucidate)
 ```
-
-# Introduction
+## Introduction
 - The below generates the panels in Figure 2.
 
 ## useful Functions
@@ -42,9 +41,10 @@ ClosestMatch2 = function(string, stringVector){
 
 ```
 
-# Pathogenics vs cancer
+# Pathogenic vs cancer peptides
 
 ## Prepare TESLA dataset
+- TESLA dataset comes with nM binding affinity from netMHCpan 4.0 and hrs stability from netMHCstabpan.
 
 ```{r}
 library(scales)
@@ -60,27 +60,178 @@ TESLA %>% glimpse()
 
 ```
 
+### Generate TESLA data binding affinity rank scores
 
-## Read in pathogenic peptides data
-### Criteria
-- Only one peptide,imm,hla observation
-- Excluded any odd looking peptides
-- Filter for  9/10mers
-- Do a little cleaning
-- Filter for specific alleles i,.e those which stabpan can process from HLAs A,B,C
-- After applying these filters there are peptides from a vast array of HLAs
-- same lengths as TESLA
+- Use netMHCpan to get the rank score.
+
+```{}
+
+TESLA$HLA_Allele = gsub(x=TESLA$HLA_Allele,pattern="\\*",replacement = "")
+
+TEST_DATA_LOCATION = "TESLA_NETMHC/"
+for(allele_i in 1:length(unique(TESLA$HLA_Allele))){
+    HLA_ALLELE_FOR_TESTING = gsub(x=unique(TESLA$HLA_Allele)[allele_i],pattern="\\:|\\*",replacement = "")
+
+
+    LENGTHS=TESLA %>% filter(HLA_Allele %in% unique(TESLA$HLA_Allele)[allele_i])%>% pull(Length) %>% unique
+    testdata=paste0(TEST_DATA_LOCATION,"Allele_",HLA_ALLELE_FOR_TESTING,"_NetMHC_data.txt")
+    write.table(TESLA %>% filter(HLA_Allele %in% unique(TESLA$HLA_Allele)[allele_i]) %>% select(Peptide) %>% pull,file=testdata,sep="\n",col.names = F,row.names = F,quote=F)
+# Run model
+    RESULTS_OUTPUT = paste0(TEST_DATA_LOCATION,"Allele_",HLA_ALLELE_FOR_TESTING,"_NetMHC","_Results.csv")
+    system(paste0("/Applications/netMHCpan-4.0/netMHCpan -BA -p ",testdata," -a ",unique(TESLA$HLA_Allele)[allele_i]," -l ",paste0(LENGTHS,collapse = ",")," -xls -xlsfile ", RESULTS_OUTPUT))
+
+}
+
+
+```
+
+
+### Read in binding affinity rank scores
+
+
+```{r}
+# Read from folder.
+TEST_DATA_LOCATION = "TESLA_NETMHC/"
+
+data_path <- TEST_DATA_LOCATION
+files <- dir(data_path, pattern = "NetMHC_Results.csv")
+
+data3 <- data_frame(file = files) %>%
+  mutate(file_contents = map(file,
+                             ~ fread(file.path(data_path, .),skip = 1))
+  )
+
+Netmhcpanres <- unnest(data3)
+# map HLA allele nomenclature
+Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$file,pattern="Allele_|_NetMHC_Results.csv",replacement = ""))
+
+Netmhcpanres$HLA_Allele = ClosestMatch2(Netmhcpanres$HLA_Allele,unique(TESLA$HLA_Allele))
+# Confirm 608 rows before and after joining with full TESLA data
+Netmhcpanres %>% nrow
+TESLA %>% nrow
+# Join dataset
+TESLA=TESLA %>% inner_join(Netmhcpanres %>% select(Peptide, HLA_Allele, Rank) %>% distinct())
+TESLA %>% nrow
+
+
+
+```
+
+### Run netMHCstabpan to generate binding stability rank scores
+
+```{}
+dir.create("TESLA_STABPAN")
+TEST_DATA_LOCATION = "TESLA_STABPAN/"
+TESLA$HLA_Allele = gsub(x=TESLA$HLA_Allele,pattern="\\*",replacement = "")
+
+#TESLA=TESLA %>% #add star and colon
+ # mutate(HLA_Allele = gsub('^(.{8})(.*)$', '\\1:\\2', gsub('^(.{5})(.*)$', '\\1*\\2', HLA_Allele)))
+
+
+for(allele_i in 1:length(unique(TESLA$HLA_Allele))){
+    HLA_ALLELE_FOR_TESTING = gsub(x=unique(TESLA$HLA_Allele)[allele_i],pattern=":",replacement = "")
+    DATASET = TESLA %>% filter(HLA_Allele %in% unique(TESLA$HLA_Allele)[allele_i])
+    for(i in 1:length(unique(DATASET$Length))){
+        LENGTH = unique(DATASET$Length)[i]
+        testdata=paste0(TEST_DATA_LOCATION,"LENGTH_",LENGTH,"_Allele_",HLA_ALLELE_FOR_TESTING,"_NetMHC_data.txt")
+        write.table(DATASET %>% filter(Length == LENGTH) %>% select(Peptide) %>% pull,file=testdata,sep="\n",col.names = F,row.names = F,quote=F)
+    # Run model
+        RESULTS_OUTPUT = paste0(TEST_DATA_LOCATION,"LENGTH_",LENGTH,"_Allele_",HLA_ALLELE_FOR_TESTING,"_NetMHC","_Results.csv")
+        system(paste0("/Applications/netMHCstabpan-1.0/netMHCstabpan -p ",testdata," -a ",unique(TESLA$HLA_Allele)[allele_i]," -l ",LENGTH," -xls -xlsfile ", RESULTS_OUTPUT))
+    }
+}
+
+
+```
+
+
+### Read in binding stability rank scores from netMHCstabpan
 
 ```{r}
 
-FullDataset=readRDS(file="Pathogenic_ClassI_peptides.rds")
+TEST_DATA_LOCATION = "TESLA_STABPAN/"
+
+data_path <- TEST_DATA_LOCATION
+files <- dir(data_path, pattern = "NetMHC_Results.csv")
+
+data3 <- data_frame(file = files) %>%
+  mutate(file_contents = map(file,
+                             ~ fread(file.path(data_path, .),skip = 1))
+  )
+
+Netmhcpanres <- unnest(data3)
+# Extract HLA and clean
+Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$file,pattern="Allele_|_NetMHC_Results.csv",replacement = ""))
+Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$HLA_Allele,pattern="LENGTH_[0-9]*_",replacement = ""))
+# map HLA nomenclature
+Netmhcpanres$HLA_Allele = ClosestMatch2(Netmhcpanres$HLA_Allele,unique(TESLA$HLA_Allele))
+
+Netmhcpanres=Netmhcpanres %>% select(Peptide, "Thalf(h)",HLA_Allele, Rank) %>% dplyr::rename(StabRank=Rank)
+
+TESLA=TESLA %>% select(!"Thalf(h)") %>% inner_join(Netmhcpanres, by=c("Peptide","HLA_Allele"))%>% distinct()
+TESLA %>% nrow
 
 ```
+
+## Read in pathogenic peptides data
+- This data has been pre-processed as described in Methods.
+```{r}
+
+# Read in RDS file of MHCI Human peptide immunogenicity dataset.
+FullDataset= readRDS("MHCI_Human_StricterCriteria_DiffFeatures_pathogenics.rds")
+
+```
+
+
 ## Prepare pathogenic dataset
-### Run netMHCpan 4.0
-- Generate nM prediction
+### Criteria
+- Only one peptide,imm,hla observation
+- Excluded any sequences composed of some non amino acid characters sometimes found in these datasets
+- Filter for peptides of length 8-14 (same as TESLA).
+- Do a little cleaning
+- Filter for specific alleles i,.e those which stabpan can process from HLAs A,B,C
+- After applying these filters there are peptides from a vast array of HLAs
+
+
+```{r}
+# Seperate the rows for one row per Peptide, Immunogenicity, HLA observation
+FullDataset=FullDataset %>% separate_rows(HLA_Allele, sep="\\|")
+FullDataset=FullDataset %>% select(!c(MHCType,Sources))
+
+FullDataset %>% select(Peptide, Immunogenicity, HLA_Allele) %>% dupes()
+# Perform some cleaning
+FullDataset$HLA_Allele=gsub(FullDataset$HLA_Allele,pattern="\\*",replacement="")
+# Exclude unusable peptides.
+FullDataset=FullDataset %>% filter(!Peptide %in%  grep(FullDataset$Peptide,pattern="X|l|-",value=T))
+# This filter had already been applied, but double check no peptides originating from humans, i.e., no neoantigens.
+FullDataset=FullDataset %>% filter(!Antigen_Organism %in% grep("Homo sapiens|cancer",Antigen_Organism,value=TRUE,ignore.case = T))
+#only 8-14mers
+FullDataset=FullDataset %>% filter(nchar(Peptide) %in% 8:14)
+
+FullDataset$HLA_Allele = gsub(",",FullDataset$HLA_Allele,replacement = "")
+FullDataset$Antigen_Name = gsub(",",FullDataset$Antigen_Name,replacement = "")
+FullDataset$Antigen_Organism = gsub(",",FullDataset$Antigen_Organism,replacement = "")
+FullDataset$Host_Organism= gsub(",",FullDataset$Host_Organism,replacement = "")
+FullDataset=FullDataset  %>% mutate(Length = nchar(Peptide))
+
+# Filter for stabpan alleles.
+ALLELES=fread("../../STABPAN_MHC_allele_names.txt",header=F)
+FullDataset=FullDataset %>% filter(HLA_Allele %in% grep("HLA-A|HLA-B|HLA-C", HLA_Allele,value = T))
+FullDataset=FullDataset %>%  filter(HLA_Allele %in% ALLELES$V1)
+
+FullDataset=FullDataset %>% distinct(Peptide,Immunogenicity,HLA_Allele,.keep_all = T)
+
+
+FullDataset %>% select(Immunogenicity) %>% table
+FullDataset %>% select(Immunogenicity) %>% table%>% prop.table()
+FullDataset %>% nrow
+```
+
+### Run netMHCpan 4.0 for BA rank/nM
+- Generate nM and rank binding affinity scores
 
 ```{}
+
 TEST_DATA_LOCATION = "PATHOGENIC_EPITOPES_NETMHCPAN/"
 for(allele_i in 1:length(unique(FullDataset$HLA_Allele))){
     HLA_ALLELE_FOR_TESTING = gsub(x=unique(FullDataset$HLA_Allele)[allele_i],pattern=":",replacement = "")
@@ -96,12 +247,10 @@ for(allele_i in 1:length(unique(FullDataset$HLA_Allele))){
 ```
 
 ### Read in netMHCpan results
-- So to compute nM for each peptide
 
 ```{r}
 
 TEST_DATA_LOCATION = "PATHOGENIC_EPITOPES_NETMHCPAN/"
-
 data_path <- TEST_DATA_LOCATION
 files <- dir(data_path, pattern = "NetMHC_Results.csv")
 
@@ -113,9 +262,7 @@ data3 <- data_frame(file = files) %>%
 Netmhcpanres <- unnest(data3)
 
 Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$file,pattern="Allele_|_NetMHC_Results.csv",replacement = ""))
-
 Netmhcpanres$HLA_Allele = ClosestMatch2(Netmhcpanres$HLA_Allele,unique(FullDataset$HLA_Allele))
-
 FullDataset=FullDataset %>% inner_join(Netmhcpanres %>% select(! c(file,Pos,ID,core,icore))) %>% mutate(Binder = ifelse(NB==1,"BINDER","NONBINDER"))
 
 FullDataset %>% nrow
@@ -124,8 +271,8 @@ FullDataset %>% nrow
 
 ```
 
-### Filter only for binders for susbequent analysis
-- Left with 24924 22717 (5772 and 25% immunogenic)
+### Filter only for binder to MHC for susbequent analysis
+- Exclude observations which are predicted to be non-binders
 
 
 ```{r}
@@ -161,7 +308,7 @@ for(allele_i in 1:length(unique(FullDataset$HLA_Allele))){
 ```
 
 ### Read in predictions from stab pan
-
+- Read in rank and hrs stability score.
 ```{r}
 
 TEST_DATA_LOCATION = "PATHOGENIC_EPITOPES_STABPAN/"
@@ -181,10 +328,10 @@ Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$HLA_Allele
 # map HLA nomenclature
 Netmhcpanres$HLA_Allele = ClosestMatch2(Netmhcpanres$HLA_Allele,unique(FullDataset$HLA_Allele))
 
-Netmhcpanres=Netmhcpanres %>% select(Peptide, "Thalf(h)",HLA_Allele)
+Netmhcpanres=Netmhcpanres %>% select(Peptide, "Thalf(h)",HLA_Allele, Rank) %>% dplyr::rename(StabRank=Rank)
 
-FullDataset=FullDataset %>% inner_join(Netmhcpanres, by=c("Peptide","HLA_Allele"))
-# 22717 obs so joining worked correctly.
+FullDataset=FullDataset %>% inner_join(Netmhcpanres, by=c("Peptide","HLA_Allele"))%>% distinct()
+# 23958 obs so joining worked correctly.
 FullDataset %>% nrow
 
 ```
@@ -202,16 +349,19 @@ FullDataset=FullDataset %>% mutate(HydrophobicCount =  stri_count_regex(FullData
 
 ```
 
-### Finalise TESLA vs Pathogenic data for analysis
+### Finalise TESLA vs Pathogenic datasets for analysis
 
 ```{r}
+
 TESLA = TESLA %>% mutate(Dataset = "Cancer")
 FullDataset = FullDataset%>% mutate(Dataset = "Pathogenic")
-TESLASubset=TESLA %>% select(Peptide,Immunogenicity, HLA_Allele, nM, "Thalf(h)", HydroFraction, Dataset)
-PathogenicSubset=FullDataset%>% select(Peptide,Immunogenicity, HLA_Allele, nM, "Thalf(h)", HydroFraction, Dataset)
 
+# Take necessary columns of data
+TESLASubset=TESLA %>% select(Peptide,Immunogenicity, HLA_Allele, nM, "Thalf(h)", HydroFraction, Dataset, Rank, StabRank)
+PathogenicSubset=FullDataset%>% select(Peptide,Immunogenicity, HLA_Allele, nM, "Thalf(h)", HydroFraction, Dataset, Rank,StabRank)
+# Combine into one DT for analysis
 combinedDataset = rbind(TESLASubset,PathogenicSubset)
-
+# Look at number of observations
 combinedDataset %>% select(Dataset,Immunogenicity)%>% table
 combinedDataset =combinedDataset%>% mutate(Dataset = factor(Dataset, levels = c("Pathogenic","Cancer")))
 
@@ -219,26 +369,31 @@ combinedDataset =combinedDataset%>% mutate(Dataset = factor(Dataset, levels = c(
 
 ## Results
 ### Affinity comparison between TESLA vs pathogenic data
-
+- Compare binding affinity in nM for TESLA vs Pathogenic peptides
+- Generates Fig 2A
 
 ```{r,dpi=300}
 
+# Generate a density plot
 BA_PATHTESLA_DENSITY_PLT= combinedDataset %>% ggplot(aes(x=nM, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+
     scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+xlab("Binding Affinity\n(nM)")
 
 mycomparisons =list(c("Positive","Negative"))
 
+# Take the median of the dataset for TESLA-Nve and TESLA-Pve to plot dashed lines.
 MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(nM))
 MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(nM))
 
-
+# Generate a violin plot, comparing immunogenicity status for 1) TESLA and 2) Pathogenic peptides.
 BA_PATHTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="nM",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Binding Affinity\n(nM)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
 
+# Generate a boxplot
 BA_PATHTESLA_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=nM, fill=Dataset))+
     geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity\n(nM)")+theme_pubr(base_size = 16)
 
+# ECDF plot. Split data first into four groups: pathogenic pve/nve, and cancer pve/nve.
 BA_PATHTESLA_ECDF_PLT=PathogenicSubset %>% select(nM, Immunogenicity, Peptide) %>% mutate(Dataset="Pathogenic")%>%rbind(
   TESLASubset %>% select(nM, Immunogenicity,Peptide)%>% mutate(Dataset = "Cancer")
 )%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=nM, color=Dataset))+stat_ecdf(size=2)+scale_x_log10()+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Binding Affinity\n(nM)")
@@ -246,33 +401,122 @@ BA_PATHTESLA_ECDF_PLT=PathogenicSubset %>% select(nM, Immunogenicity, Peptide) %
 
 ```
 
+#### Fig 2A
+
 ```{r,dpi=300, fig.width = 20}
 
 plot_grid(BA_PATHTESLA_DENSITY_PLT, BA_PATHTESLA_BOX_PLT+theme(legend.position = "none"),BA_PATHTESLA_VIOLIN_PLT, BA_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
 
 ```
 
-### Stability
-- Next we look into stability in hrs between groups
+#### Can we perform HLA-specific analysis?
+- Far too few peptides per HLA for TESLA, even for HLA A0201.
+
+```{r}
+
+combinedDataset  %>% group_by(Dataset, Immunogenicity, HLA_Allele)%>% dplyr::summarise(n=n()) %>% slice_max(n=10,order_by = n)%>% DT::datatable()
+
+```
+
+#### Confirm results are consistent with for Rank score
+- HLA ligands bind different MHC in different nM ranges.
+- We cannot exmaine these effects in a HLA-specific manner, but we can use the rank score. According to the authors of netMHCpan: "This measure is not affected by inherent bias of certain molecules towards higher or lower mean predicted affinities."
+- Here, we observe the same pattern as with nM, but more mildly.
+
+```{r}
+
+# Produce density plot
+RANK_PATHTESLA_DENSITY_PLT= combinedDataset  %>% ggplot(aes(x=Rank, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+
+    scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+xlab("Binding Affinity\n(Rank)")
+
+mycomparisons =list(c("Positive","Negative"))
+
+# Calculate medians of the TESLA dataset
+MEDIAN_DATA_TESLA_NEG = combinedDataset  %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(Rank))
+MEDIAN_DATA_TESLA_POS = combinedDataset  %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(Rank))
+
+# Violin plots
+RANK_PATHTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="Rank",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Binding Affinity\n(Rank)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+
+# Boxplots
+RANK_PATHTESLA_BOX_PLT=combinedDataset  %>% ggplot(aes(x=Immunogenicity, y=Rank, fill=Dataset))+
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity\n(Rank)")+theme_pubr(base_size = 16)
+
+# ECDF
+RANK_PATHTESLA_ECDF_PLT=PathogenicSubset%>% select(Rank, Immunogenicity, Peptide) %>% mutate(Dataset="Pathogenic")%>%rbind(
+  TESLASubset%>% select(Rank, Immunogenicity,Peptide)%>% mutate(Dataset = "Cancer")
+)%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=Rank, color=Dataset))+stat_ecdf(size=2)+scale_x_log10()+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Binding Affinity\n(Rank)")
+
+```
+```{r,dpi=300, fig.width = 20}
+
+plot_grid(RANK_PATHTESLA_DENSITY_PLT, RANK_PATHTESLA_BOX_PLT+theme(legend.position = "none"),RANK_PATHTESLA_VIOLIN_PLT, RANK_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
+
+```
+
+
+
+### Binding Stability
+#### Hours
+- Examine binding stability (hrs) between groups.
 
 ```{r,dpi=300}
-
+# Density plot. Comparing cancer vs pathogens, grouped by immunogenicity status.
 STAB_PATHTESLA_DENSITY_PLT=combinedDataset %>% ggplot(aes(x=`Thalf(h)`, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+
     scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+xlab("Binding Stability\n(hrs)")
 
 MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(`Thalf(h)`))
 MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(`Thalf(h)`))
-
-
-STAB_PATHTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="Thalf(h)",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+# Violin plot. Comparing immunogenicity status for pathogens and also for cancer.
+STAB_PATHTESLA_VIOLIN_PLT=combinedDataset %>%
+        ggviolin(x="Immunogenicity",y="Thalf(h)",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(hrs)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
-
+# Boxplot.
 STAB_PATHTESLA_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=`Thalf(h)`, fill=Dataset))+
     geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(hrs)")+theme_pubr(base_size = 16)
+# ECDF
 STAB_PATHTESLA_ECDF_PLT=PathogenicSubset %>% select(`Thalf(h)`, Immunogenicity, Peptide) %>% mutate(Dataset="Pathogenic")%>%rbind(
   TESLASubset %>% select(`Thalf(h)`, Immunogenicity,Peptide)%>% mutate(Dataset = "Cancer")
 )%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=`Thalf(h)`, color=Dataset))+stat_ecdf(size=2)+scale_x_log10()+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Binding Stability\n(hrs)")
+
+```
+
+
+#### Fig 2B
+
+```{r,dpi=300, fig.width = 20}
+library(cowplot)
+
+plot_grid(STAB_PATHTESLA_DENSITY_PLT, STAB_PATHTESLA_BOX_PLT+theme(legend.position = "none"),STAB_PATHTESLA_VIOLIN_PLT, STAB_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
+```
+
+#### Rank score.
+
+
+```{r,dpi=300}
+# Density plot
+STAB_PATHTESLA_DENSITY_PLT=combinedDataset %>% ggplot(aes(x=StabRank, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+
+    scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+xlab("Binding Stability\n(Rank)")
+# Calculate medians for cancer dataset
+MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(StabRank))
+MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(StabRank))
+
+# Violin plots
+STAB_PATHTESLA_VIOLIN_PLT=combinedDataset %>%
+        ggviolin(x="Immunogenicity",y="StabRank",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(Rank)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+
+# Boxplot
+STAB_PATHTESLA_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=StabRank, fill=Dataset))+
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(Rank)")+theme_pubr(base_size = 16)
+# ECDF
+STAB_PATHTESLA_ECDF_PLT=PathogenicSubset %>% select(StabRank, Immunogenicity, Peptide) %>% mutate(Dataset="Pathogenic")%>%rbind(
+  TESLASubset %>% select(StabRank, Immunogenicity,Peptide)%>% mutate(Dataset = "Cancer")
+)%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=StabRank, color=Dataset))+stat_ecdf(size=2)+scale_x_log10()+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Binding Stability\n(Rank)")
 
 ```
 
@@ -282,8 +526,9 @@ library(cowplot)
 plot_grid(STAB_PATHTESLA_DENSITY_PLT, STAB_PATHTESLA_BOX_PLT+theme(legend.position = "none"),STAB_PATHTESLA_VIOLIN_PLT, STAB_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
 ```
 
-### Fraction Hydrophobic
 
+### Compare the fraction of hydrophobicity between groups
+- Compare the fraction of hydrophobicity between groups
 ```{r,dpi=300}
 
 HYDRO_PATHTESLA_DENSITY_PLT= combinedDataset %>% select(Peptide,Immunogenicity,Dataset,HydroFraction) %>% distinct() %>% ggplot(aes(x=HydroFraction, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+xlab("Fraction Hydrophobic")
@@ -302,20 +547,116 @@ HYDRO_PATHTESLA_ECDF_PLT=PathogenicSubset %>% select(HydroFraction, Immunogenici
 
 ```
 
+#### Fig 2C
+
 ```{r,dpi=300, fig.width = 20}
-library(cowplot)
 
 plot_grid(HYDRO_PATHTESLA_DENSITY_PLT+rotate_x_text(angle=90), HYDRO_PATHTESLA_BOX_PLT+theme(legend.position = "none"),HYDRO_PATHTESLA_VIOLIN_PLT, HYDRO_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
 
 ```
 
+
+### Examine fraction hydrophobicity in TCR contact residues
+- Reviewer's comment :
+"The authors should check the hydrophobicity of amino acids in the non-anchor regions as well, because anchors determine HLA binding only, while the T cell response is mainly associated with non-anchor amino acids."
+- To reduce confounding factors of this analysis, we only examine 9 and 10mers
+- We adopt the approach of Koncz et al, 2021 PNAS:
+- TCR contact residues for 9mers and positions 4-8
+- TCR contact residues for 10mers are positions 5-9
+
+#### Filter 9/10mers
+
+```{r}
+
+Hydro_frac_tcr_contact_dt = combinedDataset %>% mutate(Length = nchar(Peptide)) %>% filter(Length %in% c(9,10))
+
+Hydro_frac_tcr_contact_dt %>% select(Dataset, Immunogenicity) %>% table
+
+```
+
+```{r}
+# Seperate these data to apply different strategies to different lengths.
+Hydro_frac_tcr_contact_dt_9 = combinedDataset %>% mutate(Length = nchar(Peptide)) %>% filter(Length %in% c(9))
+Hydro_frac_tcr_contact_dt_10 = combinedDataset %>% mutate(Length = nchar(Peptide)) %>% filter(Length %in% c(10))
+# 9mers: take positions 4-8
+Hydro_frac_tcr_contact_dt_9=Hydro_frac_tcr_contact_dt_9%>% mutate(TCRContact_Peptide = substr(Peptide, start=4, stop=8))
+# 10mers: take positions 5-9
+Hydro_frac_tcr_contact_dt_10=Hydro_frac_tcr_contact_dt_10%>% mutate(TCRContact_Peptide = substr(Peptide, start=5, stop=9))
+# Combine these data
+Hydro_frac_tcr_contact_dt = rbind(Hydro_frac_tcr_contact_dt_9,Hydro_frac_tcr_contact_dt_10)
+# compute hydro fraction of the 'TCR Contact Peptide'
+## Get the length
+Hydro_frac_tcr_contact_dt=Hydro_frac_tcr_contact_dt %>% mutate(TCRContact_Length = nchar(TCRContact_Peptide))
+## Count the number of hydrophobic residues in the 'TCR contact peptide'. Then divide by the length of the TCR contact peptider (5).
+Hydro_frac_tcr_contact_dt=Hydro_frac_tcr_contact_dt %>% mutate(HydrophobicCount =  stri_count_regex(Hydro_frac_tcr_contact_dt$TCRContact_Peptide, paste0(HYDROPHOBIC_RESIDUES,collapse = "|"))) %>% mutate(TCR_HydroFraction = HydrophobicCount/TCRContact_Length)
+
+```
+
+### Visualise these data
+
+```{r}
+# Generate density plot
+TCR_HYDRO_PATHTESLA_DENSITY_PLT= Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct() %>% ggplot(aes(x=TCR_HydroFraction, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+xlab("Fraction Hydrophobic (TCR Contact)")
+
+MEDIAN_DATA_TESLA_NEG = Hydro_frac_tcr_contact_dt%>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct() %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(TCR_HydroFraction))
+MEDIAN_DATA_TESLA_POS = Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct()%>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(TCR_HydroFraction))
+# Generate violin plot
+TCR_HYDRO_PATHTESLA_VIOLIN_PLT=Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct()%>% ggboxplot(x="Immunogenicity",y="TCR_HydroFraction")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center",comparisons = mycomparisons)+ylab("Fraction Hydrophobic (TCR Contact)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+# Generate box plot
+TCR_HYDRO_PATHTESLA_BOX_PLT=Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct()%>% ggplot(aes(x=Immunogenicity, y=TCR_HydroFraction, fill=Dataset))+
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Fraction Hydrophobic (TCR Contact)")+theme_pubr(base_size = 16)
+# Generate ECDF
+TCR_HYDRO_PATHTESLA_ECDF_PLT=Hydro_frac_tcr_contact_dt %>% select(TCR_HydroFraction, Immunogenicity, Peptide, Dataset)%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=TCR_HydroFraction, color=Dataset))+stat_ecdf(size=2)+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Fraction Hydrophobic (TCR Contact)")
+
+
+```
+
+```{r,dpi=300, fig.width = 20}
+
+
+plot_grid(TCR_HYDRO_PATHTESLA_DENSITY_PLT+rotate_x_text(angle=90), TCR_HYDRO_PATHTESLA_BOX_PLT+theme(legend.position = "none"),TCR_HYDRO_PATHTESLA_VIOLIN_PLT,TCR_HYDRO_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
+
+```
+
+### HLA specific plots
+- While due to low sample number of cancer peptides, we cannot compare pathogens vs cancer, but we can examine the pathogenic peptides in a HLA specific manner.
+- Here, we filter for 5 common HLAs, and compare affinity in nM, stability in hours and fraction of hydrophobicity for immunogenic vs nonimmunogenic pathogenic peptides
+
+#### Binding affinity nM
+```{r,dpi=300,fig.height=6, fig.width = 5}
+
+PathogenicSubset %>% filter(HLA_Allele %in% grep('A01:01|A02:01|B07:02|B40:01|C07:02',HLA_Allele,value = T))%>% select(HLA_Allele,Immunogenicity)%>% table
+
+FullDataset %>% filter(HLA_Allele %in% grep('A01:01|A02:01|B07:02|B40:01|C07:02',HLA_Allele,value = T))%>% ggviolin(x="Immunogenicity",y="nM",add="boxplot")+facet_wrap(~HLA_Allele,nrow=3)+theme_pubr(base_size = 14)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity (nM)")
+
+```
+
+#### Binding stability hrs
+
+```{r,dpi=300,fig.height=6, fig.width = 5}
+
+FullDataset %>% filter(HLA_Allele %in% grep('A01:01|A02:01|B07:02|B40:01|C07:02',HLA_Allele,value = T))%>% ggviolin(x="Immunogenicity",y="Thalf(h)",add="boxplot")+facet_wrap(~HLA_Allele,nrow=3)+theme_pubr(base_size = 14)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+    scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability (hrs)")
+
+```
+
+#### Fraction of hydrophobicity for the full length peptide.
+
+```{r,dpi=300,fig.height=6, fig.width = 5}
+
+
+FullDataset %>% filter(HLA_Allele %in% grep('A01:01|A02:01|B07:02|B40:01|C07:02',HLA_Allele,value = T))%>% ggboxplot(x="Immunogenicity",y="HydroFraction")+theme_pubr(base_size = 14)+facet_wrap(~HLA_Allele,nrow=3)+stat_compare_means(label = "p.signif",label.x.npc = "center", label.y = 0.9)+ylab("Fraction Hydrophobic")+ylim(0,1.0)
+```
+
+
 # Compare GBM w/ TESLA
 ## Prepare datasets for comparison
 ### GBM
 
-- TESLA already ready. So read in GBM and compute nM, binding stability and fraction hydrophobicity.
+- TESLA already ready. So read in GBM and compute binding affinity in both nM and rank, binding stability in hrs and rank and fraction hydrophobicity.
 - Read  in GBM dataset
-- Class the contradictory peptide as positive..
+- Class the contradictory peptide as positive.
 - Filter for 9 and 10mers
 - leaves 123 peptides in total. 20% are immunogenic
 
@@ -326,7 +667,8 @@ FullDataset = readRDS("GBM_test_data.rds")
 ```
 
 
-#### Run netMHCpan for GBM
+#### Run netMHCpan for GBM peptides
+
 - Generate binding affinity estimate
 
 ```{}
@@ -344,7 +686,8 @@ for(allele_i in 1:length(unique(FullDataset$HLA_Allele))){
 ```
 
 
-##### Read in
+#### Read in nM and rank scores for GBM
+- Binding affinity
 
 ```{r}
 
@@ -359,21 +702,18 @@ data3 <- data_frame(file = files) %>%
   )
 
 Netmhcpanres <- unnest(data3)
-
 Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$file,pattern="Allele_|_NetMHC_Results.csv",replacement = ""))
-
 Netmhcpanres$HLA_Allele = ClosestMatch2(Netmhcpanres$HLA_Allele,unique(FullDataset$HLA_Allele))
-
 FullDataset=FullDataset %>% inner_join(Netmhcpanres %>% select(! c(file,Pos,ID,core,icore))) %>% mutate(Binder = ifelse(NB==1,"BINDER","NONBINDER"))
 
 FullDataset %>% nrow
 
-
-
 ```
 
-#### run netmhcstabpan
+#### Run netMHCstabpan for GBM peptides
+
 - generate stability predictions
+
 ```{}
 
 TEST_DATA_LOCATION = "GBM_EPITOPES_STABPAN/"
@@ -393,7 +733,8 @@ for(allele_i in 1:length(unique(FullDataset$HLA_Allele))){
 
 ```
 
-##### Read in
+#### Read in netMHCstabpan scores for GBM peptides
+- Read in binding stability in hrs and rank
 
 ```{r}
 
@@ -411,10 +752,10 @@ Netmhcpanres <- unnest(data3)
 
 Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$file,pattern="Allele_|_NetMHC_Results.csv",replacement = ""))
 Netmhcpanres=Netmhcpanres %>% mutate(HLA_Allele = gsub(x=Netmhcpanres$HLA_Allele,pattern="LENGTH_[0-9]*_",replacement = ""))
-
+# Map HLA nomenclature
 Netmhcpanres$HLA_Allele = ClosestMatch2(Netmhcpanres$HLA_Allele,unique(FullDataset$HLA_Allele))
 
-Netmhcpanres=Netmhcpanres %>% select(Peptide, "Thalf(h)",HLA_Allele)
+Netmhcpanres=Netmhcpanres %>% select(Peptide, "Thalf(h)",HLA_Allele, Rank) %>% dplyr::rename(StabRank=Rank)
 
 FullDataset=FullDataset %>% inner_join(Netmhcpanres, by=c("Peptide"))
 
@@ -425,14 +766,14 @@ FullDataset %>% glimpse()
 
 ```
 
-### Compte fraction hydrophobicity
+### Compute fraction hydrophobicity
 
 
 ```{r}
 FullDataset=FullDataset%>% mutate(Length = nchar(Peptide)) %>% mutate(HydrophobicCount =  stri_count_regex(FullDataset$Peptide, paste0(HYDROPHOBIC_RESIDUES,collapse = "|"))) %>% mutate(HydroFraction = HydrophobicCount/Length)
 
-TESLASubset=TESLA%>% mutate(Dataset="TESLA") %>% select(Peptide,Immunogenicity, nM, "Thalf(h)", HydroFraction, Dataset)
-GBMSubset=FullDataset%>% mutate(Dataset = "GBM")%>% select(Peptide,Immunogenicity, nM, "Thalf(h)", HydroFraction, Dataset)
+TESLASubset=TESLA%>% mutate(Dataset="TESLA") %>% select(Peptide,Immunogenicity, nM, "Thalf(h)", HydroFraction, Dataset, Rank, StabRank)
+GBMSubset=FullDataset%>% mutate(Dataset = "GBM")%>% select(Peptide,Immunogenicity, nM, "Thalf(h)", HydroFraction, Dataset, Rank, StabRank)
 
 combinedDataset = rbind(TESLASubset,GBMSubset)
 combinedDataset%>% glimpse()
@@ -442,53 +783,80 @@ combinedDataset%>% glimpse()
 ## Results
 ### Affinity
 
+
 ```{r,dpi=300, fig.width = 8, fig.height = 6}
 
+# Density plot
 BA_GBMTESLA_DENSITY_PLT=combinedDataset %>% ggplot(aes(x=nM, fill=Dataset))+geom_density(aes(y=..density..),alpha=0.4, bins=10,position = "identity")+facet_wrap(~Immunogenicity)+theme_pubr(base_size = 16)+
     scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+xlab("Binding Affinity\n(nM)")
-BA_GBMTESLA_DENSITY_PLT
 
 mycomparisons =list(c("Positive","Negative"))
+# Calculate medians for cancer
+MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(nM))
+MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(nM))
 
-MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(nM))
-MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(nM))
-
-
+# Violin
 BA_GBMTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="nM",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity\n(nM)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
 
-
+# Boxplot
 BA_GBMTESLA_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=nM, fill=Dataset))+
     geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity\n(nM)")+theme_pubr(base_size = 16)
 
+# ECDF plot
+BA_GBMTESLA_ECDF_PLT=PathogenicSubset %>% select(nM, Immunogenicity, Peptide) %>% mutate(Dataset="Pathogenic")%>%rbind(
+  TESLASubset %>% select(nM, Immunogenicity,Peptide)%>% mutate(Dataset = "Cancer")
+)%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=nM, color=Dataset))+stat_ecdf(size=2)+scale_x_log10()+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Binding Affinity\n(nM)")
+
 
 ```
 
+### Fig 2D
 
 ```{r,dpi=300, fig.width = 20}
-library(cowplot)
 
-plot_grid(BA_GBMTESLA_DENSITY_PLT,BA_GBMTESLA_BOX_PLT+theme(legend.position = "none"), BA_GBMTESLA_VIOLIN_PLT,nrow=1,align="hv", rel_widths = c(1,0.8,1,1.2),axis="bl")
+plot_grid(BA_GBMTESLA_DENSITY_PLT, BA_GBMTESLA_BOX_PLT,BA_GBMTESLA_VIOLIN_PLT+theme(legend.position = "none"),BA_GBMTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
 
 ```
 
-### Stability
+### Binding affinity rank score
+
+```{r,dpi=300, fig.width = 8, fig.height = 6}
+
+mycomparisons =list(c("Positive","Negative"))
+
+MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(Rank))
+MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(Rank))
+
+
+BA_GBMTESLA_RANK_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="Rank",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity\n(Rank)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+
+
+BA_GBMTESLA_RANK_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=Rank, fill=Dataset))+
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Affinity\n(Rank)")+theme_pubr(base_size = 16)
+
+
+```
+
+### Binding stability in hrs
 
 ```{r,dpi=300, fig.width = 8, fig.height = 6}
 
 STAB_GBMTESLA_DENSITY_PLT=combinedDataset %>% ggplot(aes(x=`Thalf(h)`, fill=Dataset))+geom_density(aes(y=..density..),alpha=0.4, bins=10,position = "identity")+facet_wrap(~Immunogenicity)+theme_pubr(base_size = 16)+
     scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+xlab("Binding Stability\n(hrs)")
 
-MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(`Thalf(h)`))
-MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(`Thalf(h)`))
+MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(`Thalf(h)`))
+MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(`Thalf(h)`))
 
-STAB_GBMTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="Thalf(h)",add="boxplot")+theme_pubr(base_size = 27)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+STAB_GBMTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="Thalf(h)",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
   scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(hrs)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
 
 STAB_GBMTESLA_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=`Thalf(h)`, fill=Dataset))+
     geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
-  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(hrs)")+theme_pubr(base_size = 27)
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(hrs)")+theme_pubr(base_size = 16)
 
 STAB_GBMTESLA_ECDF_PLT=GBMSubset %>% select(`Thalf(h)`, Immunogenicity, Peptide) %>% mutate(Dataset="GBM")%>%rbind(
   TESLASubset %>% select(`Thalf(h)`, Immunogenicity,Peptide)%>% mutate(Dataset = "TESLA")
@@ -496,41 +864,99 @@ STAB_GBMTESLA_ECDF_PLT=GBMSubset %>% select(`Thalf(h)`, Immunogenicity, Peptide)
 
 ```
 
+### Binding stability in rank scores
+
+
+```{r,dpi=300, fig.width = 8, fig.height = 6}
+
+MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(`StabRank`))
+MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(`StabRank`))
+
+STAB_RANK_GBMTESLA_VIOLIN_PLT=combinedDataset %>% ggviolin(x="Immunogenicity",y="StabRank",add="boxplot")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(Rank)")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+
+STAB_RANK_GBMTESLA_BOX_PLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=StabRank, fill=Dataset))+
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x), labels = trans_format("log10", math_format(10^.x)))+ylab("Binding Stability\n(Rank)")+theme_pubr(base_size = 16)
+
+```
+
+```{r,dpi=300, fig.width = 20}
+library(cowplot)
+
+plot_grid(BA_GBMTESLA_RANK_BOX_PLT, BA_GBMTESLA_RANK_VIOLIN_PLT,STAB_GBMTESLA_BOX_PLT+theme(legend.position = "none"),STAB_GBMTESLA_VIOLIN_PLT,nrow=1,align="hv", rel_widths = c(0.8,1,0.8,1),axis="bl")
+
+```
+
+
 
 ### Fraction of hydrophobicity
 
 
 ```{r,dpi=300}
 
-MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(HydroFraction))
-MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'Cancer', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(HydroFraction))
+MEDIAN_DATA_TESLA_NEG = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(HydroFraction))
+MEDIAN_DATA_TESLA_POS = combinedDataset %>% filter(Dataset == 'TESLA', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(HydroFraction))
 
-GBMTESL_FRACTIONHYDRO_BXPLT_COMPARE_CANCER=combinedDataset %>% ggboxplot(x="Immunogenicity",y="HydroFraction")+theme_pubr(base_size = 27)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Fraction Hydrophobic")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+GBMTESL_FRACTIONHYDRO_BXPLT_COMPARE_CANCER=combinedDataset %>% ggboxplot(x="Immunogenicity",y="HydroFraction")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Fraction Hydrophobic")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
 
 GBMTESL_FRACTIONHYDRO_BXPLT=combinedDataset %>% ggplot(aes(x=Immunogenicity, y=HydroFraction, fill=Dataset))+
-    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Fraction Hydrophobic")+theme_pubr(base_size = 27)
-
-```
-
-### Supplementary fig Binding stability and fraction hydrophobicity
-
-```{r,dpi=300, fig.width = 14, fig.height = 10}
-
-plot_grid(STAB_GBMTESLA_VIOLIN_PLT+ylab("Binding Stability (hrs)"),STAB_GBMTESLA_BOX_PLT+ylab("Binding Stability (hrs)"), GBMTESL_FRACTIONHYDRO_BXPLT_COMPARE_CANCER, GBMTESL_FRACTIONHYDRO_BXPLT+theme(legend.position = "none"), nrow=2, ncol=2,align="hv",axis="bt", rel_widths = c(1.2,0.8,1.2,0.8))
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("Fraction Hydrophobic")+theme_pubr(base_size = 16)
 
 ```
 
 
+```{r,dpi=300, fig.width = 20}
+
+plot_grid(STAB_RANK_GBMTESLA_BOX_PLT+theme(legend.position = "none"), STAB_RANK_GBMTESLA_VIOLIN_PLT,GBMTESL_FRACTIONHYDRO_BXPLT+theme(legend.position = "none"),GBMTESL_FRACTIONHYDRO_BXPLT_COMPARE_CANCER,nrow=1,align="hv", rel_widths = c(0.8,1,0.8,1),axis="bl")
+
+```
+
+### Examine fraction hydrophobicity in TCR contact residues
+- Reviewer's comment :
+"The authors should check the hydrophobicity of amino acids in the non-anchor regions as well, because anchors determine HLA binding only, while the T cell response is mainly associated with non-anchor amino acids."
+- To reduce confounding factors of this analysis, we only examine 9 and 10mers
+- We adopt the approach of Koncz et al, 2021 PNAS:
+- TCR contact residues for 9mers and positions 4-8
+- TCR contact residues for 10mers are positions 5-9
 
 
+```{r}
+
+Hydro_frac_tcr_contact_dt_9 = combinedDataset %>% mutate(Length = nchar(Peptide)) %>% filter(Length %in% c(9))
+Hydro_frac_tcr_contact_dt_10 = combinedDataset %>% mutate(Length = nchar(Peptide)) %>% filter(Length %in% c(10))
+
+Hydro_frac_tcr_contact_dt_9=Hydro_frac_tcr_contact_dt_9%>% mutate(TCRContact_Peptide = substr(Peptide, start=4, stop=8))
+Hydro_frac_tcr_contact_dt_10=Hydro_frac_tcr_contact_dt_10%>% mutate(TCRContact_Peptide = substr(Peptide, start=5, stop=9))
+Hydro_frac_tcr_contact_dt = rbind(Hydro_frac_tcr_contact_dt_9,Hydro_frac_tcr_contact_dt_10)
+Hydro_frac_tcr_contact_dt %>% select(Dataset, Immunogenicity) %>% table
+
+# compute hydro fraction
+Hydro_frac_tcr_contact_dt=Hydro_frac_tcr_contact_dt %>% mutate(TCRContact_Length = nchar(TCRContact_Peptide))
+
+Hydro_frac_tcr_contact_dt=Hydro_frac_tcr_contact_dt %>% mutate(HydrophobicCount =  stri_count_regex(Hydro_frac_tcr_contact_dt$TCRContact_Peptide, paste0(HYDROPHOBIC_RESIDUES,collapse = "|"))) %>% mutate(TCR_HydroFraction = HydrophobicCount/TCRContact_Length)
 
 
+```
+
+```{r}
+TCR_HYDRO_PATHTESLA_DENSITY_PLT= Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct() %>% ggplot(aes(x=TCR_HydroFraction, fill=Dataset))+facet_wrap(~Immunogenicity)+geom_density(aes(y=..density..),alpha=0.4,position = "identity")+theme_pubr(base_size = 16)+xlab("TCR Contact Fraction Hydrophobic")
+
+MEDIAN_DATA_TESLA_NEG = Hydro_frac_tcr_contact_dt%>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct() %>% filter(Dataset == 'TESLA', Immunogenicity == "Negative") %>% dplyr::summarise(median = median(TCR_HydroFraction))
+MEDIAN_DATA_TESLA_POS = Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct()%>% filter(Dataset == 'TESLA', Immunogenicity == "Positive") %>% dplyr::summarise(median = median(TCR_HydroFraction))
+
+TCR_HYDRO_PATHTESLA_VIOLIN_PLT=Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct()%>% ggboxplot(x="Immunogenicity",y="TCR_HydroFraction")+theme_pubr(base_size = 16)+facet_grid(~Dataset)+stat_compare_means(label = "p.signif",label.x.npc = "center",comparisons = mycomparisons)+ylab("TCR Contact Fraction Hydrophobic")+ geom_hline(data=MEDIAN_DATA_TESLA_NEG,aes(yintercept=median), linetype="dashed", color = "red", size=0.5)+ geom_hline(data=MEDIAN_DATA_TESLA_POS,aes(yintercept=median), linetype="dashed", color = "green", size=0.5)
+
+TCR_HYDRO_PATHTESLA_BOX_PLT=Hydro_frac_tcr_contact_dt %>% select(Peptide,Immunogenicity,Dataset,TCR_HydroFraction) %>% distinct()%>% ggplot(aes(x=Immunogenicity, y=TCR_HydroFraction, fill=Dataset))+
+    geom_boxplot(alpha=0.3)+stat_compare_means(label = "p.signif",label.x.npc = "center")+ylab("TCR Contact Fraction Hydrophobic")+theme_pubr(base_size = 16)
+
+TCR_HYDRO_PATHTESLA_ECDF_PLT=Hydro_frac_tcr_contact_dt %>% select(TCR_HydroFraction, Immunogenicity, Peptide, Dataset)%>% mutate(Dataset = paste0(Dataset,"_",Immunogenicity))%>% ggplot(aes(x=TCR_HydroFraction, color=Dataset))+stat_ecdf(size=2)+theme_pubr(base_size = 16)+grids()+ guides(color = guide_legend(nrow = 2))+ylab("Cumulative Freq. of Peptides")+xlab("Fraction Hydrophobic")
+
+```
 
 
+```{r,dpi=300, fig.width = 20}
 
+plot_grid(TCR_HYDRO_PATHTESLA_DENSITY_PLT+rotate_x_text(angle=90), TCR_HYDRO_PATHTESLA_BOX_PLT+theme(legend.position = "none"),TCR_HYDRO_PATHTESLA_VIOLIN_PLT,TCR_HYDRO_PATHTESLA_ECDF_PLT,nrow=1,align="hv", rel_widths = c(1,0.75,1.05,1.2),axis="bl")
 
-
-
-
-
-
+```

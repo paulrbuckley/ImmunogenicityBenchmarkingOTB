@@ -113,7 +113,21 @@ BOXPLOTS_FIGC_PLT=COV2_DATA %>% inner_join(COHENS_D %>% select(Dataset, effsize)
 
 ```
 
+
+## log scaled C. Used for Gao.
+
+```{,dpi=300, fig.width = 14, fig.height=11}
+BOXPLOTS_FIGC_PLT=COV2_DATA %>% inner_join(COHENS_D %>% select(Dataset, effsize)) %>% filter(!Dataset %in% c("netMHCpan_BA","netMHCpan_EL"))%>% mutate(A201_IMM = gsub("HLA\\-|\\*","",A201_IMM))%>% mutate(A201_IMM = gsub("\\_","\n",A201_IMM))  %>%
+  mutate(A201_IMM = factor(A201_IMM, levels = c("A02:01+\nPve","A02:01+\nNve","A02:01-\nPve","A02:01-\nNve")))%>%
+  ggplot(aes(x=(A201_IMM),y=ImmunogenicityScore,color=Immunogenicity))+geom_boxplot(notch = TRUE) + stat_summary(fun=median, geom="point", shape=19,size=5, color="green")+theme_pubr(base_size = 18)+facet_wrap(~Dataset,scales="free",nrow=2)+ geom_hline(data=MEDIAN_DATA_A201_NEG%>% filter(!Dataset %in% c("netMHCpan_BA","netMHCpan_EL")),aes(yintercept=medianIMM), linetype="dashed", color = "red", size=0.5)+scale_y_log10()+xlab("Group")+rotate_x_text(angle=90)+stat_compare_means(comparisons = mycomparison,label="p.signif")#+font("x.text",size=12)+stat_pvalue_manual(COHENS_D,label="effsize",y.position = 1.0,size=3)#+scale_x_discrete(limits = rev)
+
+```
+
+
+
+
 # Plot Figs 3-C
+
 
 ```{r,dpi=300, fig.width = 18, fig.height=18}
 
@@ -144,7 +158,7 @@ DEEP_IMM_AUC =  roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter
 GAO_AUC = roc(A0201_OR_NOT ~ ImmunogenicityScore,data=COV2_DATA %>% filter(Dataset %in% 'GAO'))
 # Use ggroc to visualise
 roc_AUC=ggroc(list(IEDB_Model=IEDBMODELAUC,iPred=IPREDAUC,NetTepi=NETTEPIAUC,REpitope=REPITOPE_AUC_CV,PRIME=PRIME_AUC_CV,DeepImmuno=DEEP_IMM_AUC,GAO=GAO_AUC),legacy.axes = TRUE,size=1.25) + theme_bw() +
-  annotate("size"=5,"text",x=.70,y=.25,label=paste0("IEDB:     ",round(auc(IEDBMODELAUC),digits=3),"\n","iPred:     ",round(auc(IPREDAUC),digits=3),"\n","NetTepi: ",round(auc(NETTEPIAUC),digits=3),"\n","Repitope: ",round(auc(REPITOPE_AUC_CV),digits=3), "\n","PRIME: ",round(auc(PRIME_AUC_CV),digits = 3), "\n","DeepImmuno: ", round(auc(DEEP_IMM_AUC),digits = 3), "\n","GAO: ", round(auc(GAO_AUC),digits = 3))) + font("xy.text",size=18,color="black")+ font("xlab",size=18,color="black")+ font("ylab",size=18,color="black") + font("legend.title",color="white") + font("legend.text",size=14) + geom_abline(size=1,intercept = 0, slope = 1,color = "darkgrey", linetype = "dashed")#+ggtitle("ROC Curves")
+  annotate(hjust=0,"size"=5,"text",x=.6,y=.25,label=paste0("IEDB:     ",round(auc(IEDBMODELAUC),digits=3),"\n","iPred:     ",round(auc(IPREDAUC),digits=3),"\n","NetTepi: ",round(auc(NETTEPIAUC),digits=3),"\n","Repitope: ",round(auc(REPITOPE_AUC_CV),digits=3), "\n","PRIME: ",round(auc(PRIME_AUC_CV),digits = 3), "\n","DeepImmuno: ", round(auc(DEEP_IMM_AUC),digits = 3), "\n","GAO: ", round(auc(GAO_AUC),digits = 3))) + font("xy.text",size=18,color="black")+ font("xlab",size=18,color="black")+ font("ylab",size=18,color="black") + font("legend.title",color="white") + font("legend.text",size=14) + geom_abline(size=1,intercept = 0, slope = 1,color = "darkgrey", linetype = "dashed")#+ggtitle("ROC Curves")
 
 roc_AUC
 

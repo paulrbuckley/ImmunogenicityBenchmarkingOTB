@@ -1,0 +1,66 @@
+---
+title: "R Notebook"
+author: paulbuckley
+date: 22/12/2021
+output: html_document
+---
+
+```{r}
+library(data.table)
+library(xlsx)
+library(dplyr)
+```
+
+## Read files into R
+
+```{r}
+
+SHEET1_COV2=fread(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/1_COV2_MODEL_IMMSCORES.csv")
+SHEET2_GBM= fread(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/2_GBM_MODEL_IMMSCORES.csv")
+SHEET3=fread(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/3_TESLA_MODEL_IMMSCORES.csv")
+SHEET4 = fread("../../../2019_11_26-RuiTestedPeptidesCollatedData/2019_11_26-collected_tested153peptides_stats_updatedNov19.tsv")
+
+SHEET4=SHEET4  %>% dplyr::rename(
+  Peptide=Mut_peptide,HLA_Allele=HLA_allele,Immunogenicity=tcell_response_updatedNov19) %>% mutate(
+    Immunogenicity = ifelse(Immunogenicity=='positive','Positive','Negative'))
+
+```
+
+# write to XLSX
+
+```{r}
+
+# Write the first data set in a new workbook
+write.xlsx(SHEET1_COV2, file = "/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/BenchmarkingExtendedData.xlsx",
+      sheetName = "SARS-COV-2-BENCHMARKING", append = FALSE)
+
+write.xlsx(SHEET4, file = "/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/BenchmarkingExtendedData.xlsx",
+           sheetName="GBM_FULL_DATASET", append=TRUE)
+
+# Add a second data set in a new worksheet
+write.xlsx(SHEET2_GBM, file = "/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/BenchmarkingExtendedData.xlsx",
+           sheetName="GBM_BENCHMARKING", append=TRUE)
+# Add a third data set
+write.xlsx(SHEET3, file = "/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/BenchmarkingExtendedData.xlsx",
+           sheetName="TESLADATA_BENCHMARKING", append=TRUE)
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

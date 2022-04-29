@@ -10,6 +10,6 @@ Here, we proviide data and scripts to generate main figures in the manuscript.
 - Problems_Diff_Features_Path_Cancer_6_1.rmd generates panels from Figure 2.
 
 ## Figure 3
-
+- CrossHLA_Variation.rmd generates panels from Figure 3.
 ## Extended Data
 - Key datasets are supplied with the manuscript as supplementary data files. Additionally, they can be located in this repository in folder 'ExtendedData/' 

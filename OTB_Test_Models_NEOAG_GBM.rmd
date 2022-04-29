@@ -476,6 +476,9 @@ combinedData = combinedData%>% mutate(Length = width(Peptide)) %>% filter(Length
 combinedData %>% nrow
 combinedData %>% select(Dataset) %>% table
 
+combinedData %>% readr::write_csv(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/2_GBM_MODEL_IMMSCORES.csv")
+
+
 ```
 
 
@@ -499,8 +502,12 @@ PR_AUC_COMBINED$.estimate=round(PR_AUC_COMBINED$.estimate,digits=3)
 
 # Produce and plot PR-AUC curve
 pr_AUC=DATA_FOR_PR %>% group_by(Dataset) %>%
-  mutate(Dataset = factor(Dataset, levels = c("IEDB_Model","iPred","NetTepi","REpitope","PRIME","DeepImmuno","netMHCpan_EL","netMHCpan_BA","GAO","DeepHLApan"))) %>% pr_curve(Immunogenicity,ImmunogenicityScore) %>% autoplot() + aes(size = Dataset)+scale_size_manual(values=c(1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25))  +annotate("size"=4,"text",x=.65,y=.775,label=paste0("IEDB_Model: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'IEDB_Model')%>%pull(".estimate"),"\n","iPred: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'iPred')%>%pull(".estimate"),"\n","NetTepi: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'NetTepi')%>%pull(".estimate"),"\n","Repitope: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'REpitope')%>%pull(".estimate"),"\n","PRIME: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'PRIME')%>%pull(".estimate"),"\n","DeepImmuno: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'DeepImmuno')%>%pull(".estimate"),"\n","netMHCpan_EL: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_EL')%>%pull(".estimate"),"\n","netMHCpan_BA: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_BA')%>%pull(".estimate"),"\n","GAO: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'GAO')%>%pull(".estimate"),"\n","DeepHLApan ",PR_AUC_COMBINED %>% filter(Dataset %in% 'DeepHLApan')%>%pull(".estimate") )) + geom_hline(size=1,color="darkgrey",yintercept = nrow(FullDataset[FullDataset$Immunogenicity=='Positive',]) / nrow(FullDataset),linetype="dashed")+ font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=14)+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)
+  mutate(Dataset = factor(Dataset, levels = c("IEDB_Model","iPred","NetTepi","REpitope","PRIME","DeepImmuno","netMHCpan_EL","netMHCpan_BA","GAO","DeepHLApan"))) %>% pr_curve(Immunogenicity,ImmunogenicityScore) %>% autoplot() + aes(size = Dataset)+scale_size_manual(values=c(1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25))  +annotate(hjust=0,"size"=4,"text",x=.60,y=.775,label=paste0("IEDB_Model: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'IEDB_Model')%>%pull(".estimate"),"\n","iPred: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'iPred')%>%pull(".estimate"),"\n","NetTepi: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'NetTepi')%>%pull(".estimate"),"\n","Repitope: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'REpitope')%>%pull(".estimate"),"\n","PRIME: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'PRIME')%>%pull(".estimate"),"\n","DeepImmuno: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'DeepImmuno')%>%pull(".estimate"),"\n","netMHCpan_EL: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_EL')%>%pull(".estimate"),"\n","netMHCpan_BA: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_BA')%>%pull(".estimate"),"\n","GAO: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'GAO')%>%pull(".estimate"),"\n","DeepHLApan ",PR_AUC_COMBINED %>% filter(Dataset %in% 'DeepHLApan')%>%pull(".estimate") )) + geom_hline(size=1,color="darkgrey",yintercept = nrow(FullDataset[FullDataset$Immunogenicity=='Positive',]) / nrow(FullDataset),linetype="dashed")+ font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=14)+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)
 pr_AUC
+
+saveRDS(pr_AUC,file="GBM_PRAUC.rds")
+
+
 ```
 
 

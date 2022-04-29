@@ -21,7 +21,6 @@ library(doParallel)
 library(foreach)
 library(stringdist)
 library(caret)
-
 ```
 ## useful Functions
 
@@ -46,6 +45,41 @@ ClosestMatch2 = function(string, stringVector){
 FullDataset=readRDS("CoV2_testing_dataset_filtered.rds")
 ```
 
+## Exclude 'low confidence' Pve observations
+- External to this worksheet, we examined available SARS-CoV-2 peptide datasets to determine low confidence Pve observations.
+- We define these epitopes as peptides with one pve observation but >=2 Nve.
+- Suggests Pve observation could not be replicated.
+- We have found 20 of such epitopes.
+- They are read in and excluded below.
+
+```{r}
+
+SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE=readRDS("SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE.rds")
+SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE=SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE %>% select(Peptide, HLA_Allele)
+
+FullDataset %>% inner_join(SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE, by=c("Peptide","HLA_Allele"))%>% distinct() %>% select(Immunogenicity) %>% table
+
+FullDataset %>% nrow
+
+FullDataset %>% anti_join(SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE, by=c("Peptide","HLA_Allele"))%>% nrow
+
+
+FullDataset=FullDataset %>% anti_join(SARS_COV2_PEPS_ONEIMM_MULTIPLE_NVE, by=c("Peptide","HLA_Allele"))
+
+FullDataset %>% select(Immunogenicity) %>% table
+FullDataset %>% select(Immunogenicity) %>% table%>% prop.table()
+```
+
+
+```{r}
+FullDataset%>% group_by(Peptide, Immunogenicity, HLA_Allele) %>% dplyr::summarise(n=n())%>% ungroup%>%
+  pivot_wider(names_from = Immunogenicity, values_from = n,values_fill = 0)%>% filter(Positive ==1)%>%
+  filter(Negative > Positive)
+
+FullDataset%>% group_by(Peptide, Immunogenicity, HLA_Allele) %>% dplyr::summarise(n=n())%>% ungroup%>%
+  pivot_wider(names_from = Immunogenicity, values_from = n,values_fill = 0)%>%
+  filter(Negative > Positive)%>% filter(! Positive == 0)
+```
 
 # Test the models OTB
 - In what follows, we test the models against the CoV2 peptides. Some of the models must be compiled so are not included, although some models are in the form of simple R/Python scripts, and thus can be executed via this document. We attempt to clarify where this is or isnt possible.
@@ -212,7 +246,9 @@ FullDataset %>% dplyr::rename(MHC=HLA_Allele) %>% mutate(Dataset = "CoV2_Eps") %
 REPITOPE_RESULTS = fread("SARS_COV_2_DATASET/REPITOPE_OTB/ALL_PREDICTIONS.csv")
 print(c("REPITOPE Results has same number of rows as test dataset? : ",REPITOPE_RESULTS %>% nrow == FullDataset %>% nrow))
 
-REPITOPE_RESULTS=REPITOPE_RESULTS %>% full_join(FullDataset) %>% select(!"ImmunogenicityScore.cv")
+REPITOPE_RESULTS= FullDataset %>% inner_join(REPITOPE_RESULTS)%>% select(!"ImmunogenicityScore.cv")
+
+#REPITOPE_RESULTS=REPITOPE_RESULTS %>% full_join(FullDataset) %>% select(!"ImmunogenicityScore.cv")
 REPITOPE_RESULTS= REPITOPE_RESULTS %>% mutate(Dataset = "REPITOPE")
 
 print(c("REPITOPE Results has same number of rows as test dataset? : ",REPITOPE_RESULTS %>% nrow == FullDataset %>% nrow))
@@ -373,7 +409,7 @@ PRIME_RESULTS=PRIME_RESULTS %>% mutate(Dataset = "PRIME")
 - We were unable to compile model locally, so instead we used the webserver and read the results in.
 ```{r}
 # Output the data for use on the webserver.
-FullDataset %>% mutate(Length =  width(Peptide)) %>% filter(Length %in% c(9,10)) %>% select(Peptide, HLA_Allele) %>% mutate(HLA_Allele = gsub("\\:","",HLA_Allele)) %>% readr::write_csv(file="OUT_DEEPIMMUNO.csv",col_names = FALSE)
+#FullDataset %>% mutate(Length =  width(Peptide)) %>% filter(Length %in% c(9,10)) %>% select(Peptide, HLA_Allele) %>% mutate(HLA_Allele = gsub("\\:","",HLA_Allele)) %>% readr::write_csv(file="OUT_DEEPIMMUNO.csv",col_names = FALSE)
 # Read in the webserver results
 DEEPIMM=fread("SARS_COV_2_DATASET/DEEPIMMUNO_OTB/result.txt") %>% dplyr::rename(Peptide =peptide, HLA_Allele=HLA,ImmunogenicityScore=immunogenicity)
 # Map the HLA nomenclature
@@ -423,8 +459,13 @@ ALLOWEDLENGTHS = c(9,10) # Does not filter anything in this setting.
 combinedData = combinedData%>% mutate(Length = width(Peptide)) %>% filter(Length %in% ALLOWEDLENGTHS)%>% select(!Length)
 
 combinedData %>% nrow
-# Confirm all have 878 obs
+# Confirm all have 858 obs
 combinedData %>% select(Dataset) %>% table
+
+saveRDS(combinedData, file = "COV2_OTB_COMBINEDDATA.rds")
+
+#combinedData %>% readr::write_csv(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/Supp_Files/1_COV2_MODEL_IMMSCORES.csv")
+
 
 ```
 
@@ -445,7 +486,7 @@ NETMHCPAN_IMM_BA_AUC = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedDat
 GAO_AUC = roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% 'GAO'))
 # Use GGROC to combine and visualise the ROC-AUC curves
 roc_AUC=ggroc(list(IEDB_Model=IEDBMODELAUC,iPred=IPREDAUC,NetTepi=NETTEPIAUC,REpitope=REPITOPE_AUC_CV,PRIME=PRIME_AUC_CV,DeepImmuno=DEEP_IMM_AUC,netMHCpan_EL=NETMHCPAN_IMM_AUC,netMHCpan_BA=NETMHCPAN_IMM_BA_AUC,GAO=GAO_AUC),legacy.axes = TRUE,size=1.25) + theme_bw() +
-  annotate("size"=4,"text",x=.80,y=.19,label=paste0("IEDB_Model:     ",round(auc(IEDBMODELAUC),digits=3),"\n","iPred:     ",round(auc(IPREDAUC),digits=3),"\n","NetTepi: ",round(auc(NETTEPIAUC),digits=3),"\n","REpitope: ",round(auc(REPITOPE_AUC_CV),digits=3), "\n","PRIME: ",round(auc(PRIME_AUC_CV),digits = 3), "\n","DeepImmuno: ", round(auc(DEEP_IMM_AUC),digits = 3),  "\n","netMHCpan_EL: ", round(auc(NETMHCPAN_IMM_AUC),digits = 3),  "\n","netMHCpan_BA: ", round(auc(NETMHCPAN_IMM_BA_AUC),digits = 3),  "\n","GAO: ", round(auc(GAO_AUC),digits = 3))) + font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=14)+ geom_abline(size=1,intercept = 0, slope = 1,color = "darkgrey", linetype = "dashed")+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)#+ggtitle("ROC Curves")
+  annotate(hjust=0,"size"=4,"text",x=.60,y=.19,label=paste0("IEDB_Model: ",round(auc(IEDBMODELAUC),digits=3),"\n","iPred: ",round(auc(IPREDAUC),digits=3),"\n","NetTepi: ",round(auc(NETTEPIAUC),digits=3),"\n","REpitope: ",round(auc(REPITOPE_AUC_CV),digits=3), "\n","PRIME: ",round(auc(PRIME_AUC_CV),digits = 3), "\n","DeepImmuno: ", round(auc(DEEP_IMM_AUC),digits = 3),  "\n","netMHCpan_EL: ", round(auc(NETMHCPAN_IMM_AUC),digits = 3),  "\n","netMHCpan_BA: ", round(auc(NETMHCPAN_IMM_BA_AUC),digits = 3),  "\n","GAO: ", round(auc(GAO_AUC),digits = 3))) + font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=14)+ geom_abline(size=1,intercept = 0, slope = 1,color = "darkgrey", linetype = "dashed")+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)#+ggtitle("ROC Curves")
 
 ```
 
@@ -473,7 +514,7 @@ DATA_FOR_PR[DATA_FOR_PR$Dataset == 'REPITOPE',]$Dataset = "REpitope"
 # Produce and plot PR-AUC curve
 pr_AUC=DATA_FOR_PR %>% group_by(Dataset) %>%
   mutate(Dataset = factor(Dataset, levels = c("IEDB_Model","iPred","NetTepi","REpitope","PRIME","DeepImmuno","netMHCpan_EL","netMHCpan_BA","GAO"))) %>% pr_curve(Immunogenicity,ImmunogenicityScore) %>%
-  autoplot() + aes(size = Dataset)+scale_size_manual(values=c(1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25)) +annotate("size"=4,"text",x=.8,y=.19,label=paste0("IEDB_Model: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'IEDB')%>%pull(".estimate"),"\n","iPred: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'IPRED')%>%pull(".estimate"),"\n","NetTepi: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'NETTEPI')%>%pull(".estimate"),"\n","REpitope: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'REPITOPE')%>%pull(".estimate"),"\n","PRIME: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'PRIME')%>%pull(".estimate"),"\n","DeepImmuno: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'DeepImmuno')%>%pull(".estimate"),"\n","netMHCpan_EL: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_EL')%>%pull(".estimate"),"\n","netMHCpan_BA: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_BA')%>%pull(".estimate"),"\n","GAO: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'GAO')%>%pull(".estimate") )) + geom_hline(size=1,color="darkgrey",yintercept = nrow(FullDataset[FullDataset$Immunogenicity=='Positive',]) / nrow(FullDataset),linetype="dashed")+ font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=14)+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)
+  autoplot() + aes(size = Dataset)+scale_size_manual(values=c(1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25,1.25)) +annotate(hjust=0,"size"=4,"text",x=.6,y=.19,label=paste0("IEDB_Model: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'IEDB')%>%pull(".estimate"),"\n","iPred: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'IPRED')%>%pull(".estimate"),"\n","NetTepi: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'NETTEPI')%>%pull(".estimate"),"\n","REpitope: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'REPITOPE')%>%pull(".estimate"),"\n","PRIME: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'PRIME')%>%pull(".estimate"),"\n","DeepImmuno: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'DeepImmuno')%>%pull(".estimate"),"\n","netMHCpan_EL: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_EL')%>%pull(".estimate"),"\n","netMHCpan_BA: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'netMHCpan_BA')%>%pull(".estimate"),"\n","GAO: ",PR_AUC_COMBINED %>% filter(Dataset %in% 'GAO')%>%pull(".estimate") )) + geom_hline(size=1,color="darkgrey",yintercept = nrow(FullDataset[FullDataset$Immunogenicity=='Positive',]) / nrow(FullDataset),linetype="dashed")+ font("xy.text",size=16,color="black")+ font("xlab",size=16,color="black")+ font("ylab",size=16,color="black") + font("legend.title",color="white") + font("legend.text",size=14)+theme(panel.background = element_rect(colour = "black", size=0.5))+ coord_fixed(xlim = 0:1, ylim = 0:1)
 
 
 
@@ -483,6 +524,7 @@ pr_AUC=DATA_FOR_PR %>% group_by(Dataset) %>%
 ## Figure 1A-B
 
 ```{r,fig.width=17,fig.height=9,message=FALSE,warning=FALSE,dpi=300}
+saveRDS(roc_AUC, file="COV2_OTB_ANALYSIS_ROCAUC_FIG1A.rds")
 #use cowplot to organise the plots
 GRID1= cowplot::plot_grid(roc_AUC)
 GRID2= cowplot::plot_grid(pr_AUC)
@@ -492,13 +534,27 @@ cowplot::plot_grid(GRID1,GRID2,align="hv")
 ```
 
 
+```{}
+GBM_PRAUC = readRDS("GBM_PRAUC.rds")
+TESLA_PRAUC = readRDS("TESLA_PRAUC.rds")
+```
+
+```{,fig.width=17,fig.height=16,message=FALSE,warning=FALSE,dpi=300}
+
+GRID1= cowplot::plot_grid(roc_AUC)
+GRID2= cowplot::plot_grid(pr_AUC)
+GRID3 = cowplot::plot_grid(GBM_PRAUC)
+GRID4 = cowplot::plot_grid(TESLA_PRAUC)
+cowplot::plot_grid(GRID1,GRID2,GRID3,GRID4,align="hv",ncol = 2,nrow=2)
+
+```
 
 # ROC-AUC Bootstrap analysis
 - shuffle the immunogenicity labels of the peptides 1000 times
 - Compute new ROC-AUC score each time given shuffled labels, to generate distribution of random ROC-AUC
 - Plot distribution and compare to real ROC-AUC
 - Factor levels are changed to ensure consistency of namings and colours across plots
-```{r,cache=TRUE,warning=FALSE, message = FALSE,dpi=300,fig.width=8,fig.height=6}
+```{r,warning=FALSE, message = FALSE,dpi=300,fig.width=8,fig.height=6}
 set.seed(41)
 DATA_FOR_ROC=DATA_FOR_PR
 #setup parallel backend to use multiple processors
@@ -528,7 +584,10 @@ ROC_RAND_DIST_FIG
 
 ```{r}
 
-ROC_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(Random_mean=mean(ROC),sd=sd(ROC)) %>% inner_join(ROC_AUC_COMBINED) %>% dplyr::rename(Predicted=ROC) %>% mutate(zscore = round(((Predicted-Random_mean)/sd),2) ) %>% DT::datatable(caption="Mean, sd and zscore to show distance from mean of random distribution")
+ROC_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(sd=round(sd(ROC),digits=3),Random_mean=round(mean(ROC),digits=3)) %>% inner_join(ROC_AUC_COMBINED) %>% dplyr::rename(Predicted=ROC) %>% mutate(zscore = round(((Predicted-Random_mean)/sd),2) )%>% mutate(Predicted = round(Predicted,digits=3))%>% DT::datatable(caption="Mean, sd and zscore to show distance from mean of random distribution")
+
+#ROC_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(sd=round(sd(ROC),digits=3),Random_mean=round(mean(ROC),digits=3)) %>% inner_join(ROC_AUC_COMBINED) %>% dplyr::rename(Predicted=ROC) %>% mutate(zscore = round(((Predicted-Random_mean)
+#/sd),2) )%>% mutate(Predicted = round(Predicted,digits=3))%>% readr::write_tsv(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/IGNORE_PRODUCTION/COV2_ROCAUC_ZSCORE.#txt")
 
 ```
 
@@ -538,7 +597,7 @@ ROC_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(Random_mean=mean(RO
 - Plot distribution and compare to real PR-AUC
 - Factor levels are changed to ensure consistency of namings and colours across plots
 
-```{r,cache=TRUE,warning=FALSE, message = FALSE,dpi=300,fig.width=8,fig.height=6}
+```{r,warning=FALSE, message = FALSE,dpi=300,fig.width=8,fig.height=6}
 #setup parallel backend to use multiple processors
 set.seed(41)
 cores=detectCores()
@@ -572,11 +631,38 @@ cowplot::plot_grid(ROC_RAND_DIST_FIG, PR_RAND_DIST_FIG, nrow=1,align="hv",axis="
 
 ```{r}
 
-PR_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(Random_mean=mean(.estimate),sd=sd(.estimate)) %>% inner_join(PR_AUC_COMBINED %>% select(!c(.metric,.estimator))) %>% dplyr::rename(Predicted=.estimate) %>% mutate(zscore = round(((Predicted-Random_mean)/sd),2) ) %>% DT::datatable(caption="Mean, sd and zscore to show distance from mean of random distribution")
+PR_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(Random_mean=round(mean(.estimate),digits=3),sd=round(sd(.estimate),digits=3)) %>% inner_join(PR_AUC_COMBINED %>% select(!c(.metric,.estimator))) %>%
+  dplyr::rename(Predicted=.estimate) %>% mutate(Predicted = round(Predicted, digits=3)) %>% mutate(zscore = round(((Predicted-Random_mean)/sd),2) ) %>% DT::datatable(caption="Mean, sd and zscore to show distance from mean of random distribution")
 
-
+#PR_AUC_RAND.DIST %>% group_by(Dataset) %>% dplyr::summarise(Random_mean=round(mean(.estimate),digits=3),sd=round(sd(.estimate),digits=3)) %>% inner_join(PR_AUC_COMBINED %>% select(!c(.metric,.estimator))) %>%
+#  dplyr::rename(Predicted=.estimate) %>% mutate(Predicted = round(Predicted, digits=3)) %>% mutate(zscore = round(((Predicted-Random_mean)/sd),2) ) %>% readr::write_tsv#(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/IGNORE_PRODUCTION/COV2_PRAUC_ZSCORE.txt")
 
 ```
+
+
+# Use ROC-AUC optimal threshold to compute model metrics
+
+```{r}
+library(caret)
+MODEL_METRICS=foreach(i = 1:length(unique(combinedData$Dataset)), .combine = "rbind")%do% {
+    MODEL = unique(combinedData$Dataset)[i]
+    ROC_MODEL=roc(Immunogenicity ~ ImmunogenicityScore,data=combinedData %>% filter(Dataset %in% MODEL))
+    threshold =   coords(roc=ROC_MODEL, x="best", input="threshold", best.method="youden", transpose=F)$threshold
+    threshold_data = combinedData %>% filter(Dataset %in% MODEL)%>% mutate(ImmunogenicityPrediction = ifelse(ImmunogenicityScore > threshold, "Positive","Negative"))
+    CM=confusionMatrix(positive = "Positive",mode = "prec_recall",reference=factor(threshold_data  %>% select(Immunogenicity) %>% pull(),
+                       levels = c("Negative","Positive")),
+                       factor(threshold_data %>% select(ImmunogenicityPrediction) %>% pull(),
+                       levels=c("Negative","Positive")))
+
+    TEST=as.matrix(CM, what = "classes")
+
+    data.table("Metrics"=row.names(TEST), TEST)%>% pivot_wider(names_from = Metrics, values_from = V1)%>% mutate(Dataset = MODEL)%>% mutate_if(is.numeric, round, digits=3)
+}
+MODEL_METRICS%>% DT::datatable()
+
+#MODEL_METRICS %>% readr::write_tsv(file="/Users/paulbuckley/Dropbox/ImmunogenicityBenchmark_V2_EmergingViruses/ImmunogenicityBenchmark_V2_EmergingViruses_BIB_RR/IGNORE_PRODUCTION/COV2_MODEL_METRICS.txt")
+```
+
 
 # Compute and visualise confusion matrices
 - To generate binary classifications, an optimal threshold is calculated for each model using 'youden index' given the model's respective prediction score.

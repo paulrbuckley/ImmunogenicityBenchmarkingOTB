@@ -5,7 +5,6 @@ AEIRASANL,HLA-B*40:01,Positive,Positive,CoV2_Eps
 AEIVDTVSAL,HLA-B*40:01,Negative,Negative,CoV2_Eps
 AEWFLAYIL,HLA-B*40:01,Negative|Positive,Positive,CoV2_Eps
 AFPFTIYSL,HLA-A*24:02,Negative,Negative,CoV2_Eps
-AGDSGFAAY,HLA-A*01:01,Negative|Positive,Positive,CoV2_Eps
 AGFSLWVYK,HLA-A*11:01,Positive,Positive,CoV2_Eps
 AIDAYPLTK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 AIDAYPLTK,HLA-A*11:01,Negative,Negative,CoV2_Eps
@@ -34,8 +33,6 @@ ALRKVPTDNY,HLA-B*15:01,Positive,Positive,CoV2_Eps
 ALSKGVHFV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 ALWEIQQVV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 AMRPNFTIK,HLA-A*03:01,Negative,Negative,CoV2_Eps
-APFLYLYAL,HLA-B*07:02,Negative|Positive,Positive,CoV2_Eps
-APHGHVMVEL,HLA-B*07:02,Negative|Positive,Positive,CoV2_Eps
 APHGVVFLHV,HLA-B*07:02,Positive,Positive,CoV2_Eps
 APLLSAGIF,HLA-B*07:02,Negative,Negative,CoV2_Eps
 APSASAFFGM,HLA-B*07:02,Positive,Positive,CoV2_Eps
@@ -43,7 +40,6 @@ APYIVGDVV,HLA-B*07:02,Negative,Negative,CoV2_Eps
 AQCFKMFYK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 AQFAPSASA,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 AQFAPSASAF,HLA-A*24:02,Positive,Positive,CoV2_Eps
-AQFAPSASAF,HLA-B*15:01,Negative|Positive,Positive,CoV2_Eps
 ASAFFGMSR,HLA-A*11:01,Negative|Positive,Positive,CoV2_Eps
 ASANLAATK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 ASANLAATK,HLA-A*11:01,Negative,Negative,CoV2_Eps
@@ -110,7 +106,6 @@ EILPVSMTK,HLA-A*03:01,Positive,Positive,CoV2_Eps
 ELDERIDKV,HLA-A*02:01,Positive,Positive,CoV2_Eps
 ELIRQGTDY,HLA-A*26:01,Positive,Positive,CoV2_Eps
 ELLHAPATV,HLA-A*02:01,Positive,Positive,CoV2_Eps
-EPKLGSLVV,HLA-B*07:02,Negative|Positive,Positive,CoV2_Eps
 EPVLKGVKL,HLA-B*07:02,Positive,Positive,CoV2_Eps
 ETIQITISSF,HLA-A*26:01,Positive,Positive,CoV2_Eps
 ETKCTLKSF,HLA-A*26:01,Positive,Positive,CoV2_Eps
@@ -338,7 +333,6 @@ KPVPEVKIL,HLA-B*07:02,Negative,Negative,CoV2_Eps
 KPYIKWDLL,HLA-B*07:02,Negative|Positive,Positive,CoV2_Eps
 KQFDTYNLW,HLA-B*15:01,Positive,Positive,CoV2_Eps
 KQGDDYVYL,HLA-A*02:01,Positive,Positive,CoV2_Eps
-KQLIKVTLVF,HLA-B*15:01,Negative|Positive,Positive,CoV2_Eps
 KSAAEASKK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 KSAAEASKK,HLA-A*11:01,Positive,Positive,CoV2_Eps
 KSAGFPFNK,HLA-A*03:01,Negative|Positive,Positive,CoV2_Eps
@@ -386,7 +380,6 @@ LLLLDRLNQL,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 LLMPLKAPK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 LLNKEMYLK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 LLNKEMYLK,HLA-A*11:01,Negative,Negative,CoV2_Eps
-LLNKHIDAY,HLA-B*15:01,Negative|Positive,Positive,CoV2_Eps
 LLSAGIFGA,HLA-A*02:01,Negative,Negative,CoV2_Eps
 LLTDEMIAQY,HLA-A*01:01,Positive,Positive,CoV2_Eps
 LLWPVTLAC,HLA-A*02:01,Positive,Positive,CoV2_Eps
@@ -413,7 +406,6 @@ LTAVVIPTK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 LTDEMIAQY,HLA-A*01:01,Negative|Positive,Positive,CoV2_Eps
 LTDEMIAQY,HLA-B*35:01,Positive,Positive,CoV2_Eps
 LTDEMIAQYT,HLA-A*01:01,Positive,Positive,CoV2_Eps
-LTGHMLDMY,HLA-A*01:01,Negative|Positive,Positive,CoV2_Eps
 LTNDNTSRY,HLA-A*01:01,Negative,Negative,CoV2_Eps
 LVAEWFLAY,HLA-A*26:01,Positive,Positive,CoV2_Eps
 LVASIKNFK,HLA-A*03:01,Negative,Negative,CoV2_Eps
@@ -421,7 +413,6 @@ LVASIKNFK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 LVKNKCVNF,HLA-B*15:01,Positive,Positive,CoV2_Eps
 LVKPSFYVY,HLA-B*15:01,Negative,Negative,CoV2_Eps
 LVKQGDDYVY,HLA-B*15:01,Positive,Positive,CoV2_Eps
-LVQMAPISAM,HLA-B*15:01,Negative|Positive,Positive,CoV2_Eps
 LVSDIDITF,HLA-B*35:01,Positive,Positive,CoV2_Eps
 LWLLWPVTL,HLA-A*24:02,Positive,Positive,CoV2_Eps
 LWPVTLACF,HLA-A*24:02,Positive,Positive,CoV2_Eps
@@ -458,7 +449,6 @@ MVPHISRQRL,HLA-B*07:02,Negative,Negative,CoV2_Eps
 MYASAVVLL,HLA-A*24:02,Negative|Positive,Positive,CoV2_Eps
 NATRFASVY,HLA-B*35:01,Positive,Positive,CoV2_Eps
 NELSRVLGL,HLA-B*40:01,Positive,Positive,CoV2_Eps
-NESLIDLQEL,HLA-B*40:01,Negative|Positive,Positive,CoV2_Eps
 NFKDQVILL,HLA-A*24:02,Negative,Negative,CoV2_Eps
 NFNKDFYDF,HLA-A*24:02,Negative,Negative,CoV2_Eps
 NIADYNYKL,HLA-A*02:01,Positive,Positive,CoV2_Eps
@@ -526,14 +516,12 @@ RARSVSPKL,HLA-B*07:02,Positive,Positive,CoV2_Eps
 RASANLAATK,HLA-A*03:01,Positive,Positive,CoV2_Eps
 RFDNPVLPF,HLA-A*24:02,Positive,Positive,CoV2_Eps
 RFLYIIKLIF,HLA-A*24:02,Positive,Positive,CoV2_Eps
-RIAGHHLGR,HLA-A*03:01,Negative|Positive,Positive,CoV2_Eps
 RIDKVLNEK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 RIDKVLNEK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 RIMTWLDMV,HLA-A*02:01,Positive,Positive,CoV2_Eps
 RIRGGDGKM,HLA-B*07:02,Positive,Positive,CoV2_Eps
 RLANECAQV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 RLDKVEAEV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
-RLFRKSNLK,HLA-A*03:01,Negative|Positive,Positive,CoV2_Eps
 RLFRKSNLK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 RLIDAMMFT,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 RLISMMGFK,HLA-A*03:01,Negative,Negative,CoV2_Eps
@@ -545,7 +533,6 @@ RLQSLQTYV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 RLYYDSMSY,HLA-A*03:01,Negative,Negative,CoV2_Eps
 RLYYDSMSY,HLA-A*11:01,Negative,Negative,CoV2_Eps
 RLYYDSMSY,HLA-B*15:01,Positive,Positive,CoV2_Eps
-RMYIFFASFY,HLA-A*03:01,Negative|Positive,Positive,CoV2_Eps
 RNPAWRKAVF,HLA-B*07:02,Negative,Negative,CoV2_Eps
 RPDTRYVLM,HLA-B*07:02,Positive,Positive,CoV2_Eps
 RPDTRYVLM,HLA-B*35:01,Positive,Positive,CoV2_Eps
@@ -585,7 +572,6 @@ SEIIGYKAI,HLA-B*40:01,Positive,Positive,CoV2_Eps
 SELLTPLGI,HLA-B*40:01,Positive,Positive,CoV2_Eps
 SELVIGAVIL,HLA-B*40:01,Negative|Positive,Positive,CoV2_Eps
 SEPVLKGVKL,HLA-B*07:02,Negative,Negative,CoV2_Eps
-SEPVLKGVKL,HLA-B*40:01,Negative|Positive,Positive,CoV2_Eps
 SFGPLVRKI,HLA-A*24:02,Positive,Positive,CoV2_Eps
 SFLPGVYSV,HLA-A*24:02,Positive,Positive,CoV2_Eps
 SIIAYTMSL,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
@@ -666,7 +652,6 @@ TISLAGSYK,HLA-A*11:01,Positive,Positive,CoV2_Eps
 TITQMNLKY,HLA-A*01:01,Positive,Positive,CoV2_Eps
 TIWFLLLSV,HLA-A*02:01,Positive,Positive,CoV2_Eps
 TKPVETSNSF,HLA-B*07:02,Negative,Negative,CoV2_Eps
-TLACFVLAAV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 TLADAGFIK,HLA-A*03:01,Negative|Positive,Positive,CoV2_Eps
 TLADAGFIK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 TLDSKTQSL,HLA-A*02:01,Positive,Positive,CoV2_Eps
@@ -675,7 +660,6 @@ TLIGDCATV,HLA-A*02:01,Negative,Negative,CoV2_Eps
 TLKGGAPTK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 TLKSFTVEK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 TLKSFTVEK,HLA-A*11:01,Negative|Positive,Positive,CoV2_Eps
-TLMNVLTLV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 TLNDLNETL,HLA-A*02:01,Negative,Negative,CoV2_Eps
 TLVPQEHYV,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 TMADLVYAL,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
@@ -741,7 +725,6 @@ VLLSVLQQL,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 VLNDILSRL,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 VLNDILSRL,HLA-A*11:01,Negative,Negative,CoV2_Eps
 VLNEKCSAY,HLA-B*15:01,Positive,Positive,CoV2_Eps
-VLQLPQGTTL,HLA-A*02:01,Negative|Positive,Positive,CoV2_Eps
 VLSEARQHL,HLA-A*02:01,Positive,Positive,CoV2_Eps
 VLSGHNLAK,HLA-A*03:01,Negative,Negative,CoV2_Eps
 VLTESNKKF,HLA-B*15:01,Positive,Positive,CoV2_Eps
@@ -757,7 +740,6 @@ VPHVGEIPV,HLA-B*07:02,Positive,Positive,CoV2_Eps
 VPYCYDTNVL,HLA-B*07:02,Negative,Negative,CoV2_Eps
 VPYNMRVIHF,HLA-A*24:02,Negative,Negative,CoV2_Eps
 VPYNMRVIHF,HLA-B*07:02,Negative,Negative,CoV2_Eps
-VQSTQWSLF,HLA-A*24:02,Negative|Positive,Positive,CoV2_Eps
 VSLVKPSFY,HLA-A*01:01,Negative,Negative,CoV2_Eps
 VSSPDAVTAY,HLA-A*01:01,Positive,Positive,CoV2_Eps
 VTDTPKGPK,HLA-A*11:01,Positive,Positive,CoV2_Eps
@@ -767,7 +749,6 @@ VTFQSAVKR,HLA-A*11:01,Negative,Negative,CoV2_Eps
 VTLAILTALR,HLA-A*11:01,Negative,Negative,CoV2_Eps
 VTNNTFTLK,HLA-A*03:01,Positive,Positive,CoV2_Eps
 VTNNTFTLK,HLA-A*11:01,Positive,Positive,CoV2_Eps
-VTYVPAQEK,HLA-A*03:01,Negative|Positive,Positive,CoV2_Eps
 VTYVPAQEK,HLA-A*11:01,Negative,Negative,CoV2_Eps
 VVAIDYKHY,HLA-B*15:01,Positive,Positive,CoV2_Eps
 VVCTEIDPK,HLA-A*11:01,Positive,Positive,CoV2_Eps
@@ -869,7 +850,6 @@ YVVDDPCPI,HLA-A*02:01,Positive,Positive,CoV2_Eps
 YVWKSYVHV,HLA-A*02:01,Negative,Negative,CoV2_Eps
 YVYANGGKGF,HLA-A*26:01,Positive,Positive,CoV2_Eps
 YVYANGGKGF,HLA-B*15:01,Positive,Positive,CoV2_Eps
-YYHKNNKSW,HLA-A*24:02,Negative|Positive,Positive,CoV2_Eps
 YYHTTDPSF,HLA-A*24:02,Negative|Positive,Positive,CoV2_Eps
 YYKKDNSYF,HLA-A*24:02,Negative|Positive,Positive,CoV2_Eps
 YYPSARIVY,HLA-A*24:02,Positive,Positive,CoV2_Eps

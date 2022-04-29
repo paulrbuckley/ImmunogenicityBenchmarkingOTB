@@ -24,3 +24,5 @@ foreach
 iterators
 doParallel
 stringdist
+lattice
+caret
